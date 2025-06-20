@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation'; // Keep this if it was there, or ensure it is
+import { SupabaseClient } from '@supabase/supabase-js'; // Keep this
+import { useSupabase } from '@/contexts/SupabaseProvider'; // Keep this
 import QrScanner from '@/components/QrScanner';
 import toast from 'react-hot-toast';
-// import { v4 as uuidv4 } from 'uuid'; // No longer needed here directly for userId
 import { useUserStore } from '@/stores/userStore'; // Import the store
+import { motion } from 'framer-motion'; // Add framer-motion
 
 // Remove or comment out the old getOrCreateUserId function
 // const getOrCreateUserId = (): string => { ... };
@@ -125,7 +128,12 @@ export default function HomePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col items-center">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto px-4 py-8 flex flex-col items-center"
+    >
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-primary mb-2">Vítejte v LetsChat!</h1>
         <p className="text-lg text-text-secondary">
@@ -147,6 +155,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -56,7 +56,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
                     {title}
                     <button
                       onClick={onClose}
-                      className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                          className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary rounded"
                       aria-label="Close modal"
                     >
                       <X size={24} />

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, XCircle } from 'lucide-react'; // Added XCircle
 import Button from '@/components/ui/Button'; // Your Button component
 import { useUserStore } from '@/stores/userStore'; // Import the store
+import { motion } from 'framer-motion'; // Add framer-motion
 
 // Remove or comment out the old getUserIdFromStorage function
 // const getUserIdFromStorage = (): string | null => { ... };
@@ -159,7 +160,12 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="container mx-auto p-0 md:p-4 h-full">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto p-0 md:p-4 h-full"
+    >
       {/* Optionally, add a back button or more chat context here if needed */}
       {/* <Button onClick={() => router.push('/')} variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />} className="mb-2">
         Nové skenování / Kód
@@ -169,6 +175,6 @@ export default function ChatPage() {
         currentUserId={currentUserId}
         chatCode={chatDetails.chat_code}
       />
-    </div>
+    </motion.div>
   );
 }

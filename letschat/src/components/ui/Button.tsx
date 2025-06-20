@@ -41,6 +41,7 @@ const Button: React.FC<ButtonProps> = ({
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
+      whileHover={!isLoading && !props.disabled ? { scale: 1.03, transition: { duration: 0.1 } } : {}}
       className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${loadingStyles} ${className}`}
       disabled={isLoading || props.disabled}
       {...props}

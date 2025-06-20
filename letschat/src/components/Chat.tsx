@@ -5,6 +5,7 @@ import { useSupabase } from '@/contexts/SupabaseProvider';
 import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
 import { Send } from 'lucide-react';
+import { motion } from 'framer-motion'; // Add framer-motion
 import Message, { MessageProps as AppMessageProps } from './Message'; // Renamed to avoid conflict
 import Input from './ui/Input';
 import Button from './ui/Button';
@@ -195,8 +196,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
             Zatím žádné zprávy. Začněte konverzaci!
           </div>
         )}
-        {messages.map((msg) => (
-          <Message key={msg.id} {...msg} />
+           {messages.map((msg, index) => (
+             <motion.div
+               key={msg.id}
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.3, delay: index * 0.05 }} // Stagger animation
+             >
+               <Message {...msg} />
+             </motion.div>
         ))}
         <div ref={messagesEndRef} />
       </div>

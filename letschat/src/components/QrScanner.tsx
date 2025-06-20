@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
+import { motion } from 'framer-motion'; // Import motion
 import { Camera, XCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from './ui/Button';
@@ -158,7 +159,12 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
 
 
   return (
-    <div className="p-4 border rounded-lg shadow-md bg-white max-w-md mx-auto">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="p-4 border rounded-lg shadow-md bg-white max-w-md mx-auto"
+    >
       <h2 className="text-xl font-semibold text-center mb-4 text-text-primary">Připojit se k chatu</h2>
 
       {/* Scanner Region and Controls */}
@@ -172,14 +178,22 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
       </div>
 
       {scanError && !isScanning && (
-        <p className="text-red-500 text-sm text-center mt-2 flex items-center justify-center">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-red-500 text-sm text-center mt-2 flex items-center justify-center"
+        >
           <XCircle size={18} className="mr-1" /> {scanError}
-        </p>
+        </motion.p>
       )}
       {permissionGranted === true && isScanning && (
-         <p className="text-green-600 text-sm text-center mt-2 flex items-center justify-center">
+         <motion.p
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           className="text-green-600 text-sm text-center mt-2 flex items-center justify-center"
+         >
           <CheckCircle size={18} className="mr-1" /> Kamera aktivní. Namiřte na QR kód.
-        </p>
+        </motion.p>
       )}
 
 
@@ -221,7 +235,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
           </Button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };
 
