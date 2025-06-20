@@ -1,14 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable SWC and use Babel instead for WebContainer compatibility
+  // Completely disable SWC
   swcMinify: false,
-  compiler: {
-    // Disable SWC compiler
-    removeConsole: false,
-  },
-  // Force Babel usage
+  
+  // Force use of Babel
   experimental: {
     forceSwcTransforms: false,
+  },
+  
+  // Webpack configuration to ensure Babel is used
+  webpack: (config, { dev, isServer }) => {
+    // Force Babel for all JS/TS files
+    config.module.rules.push({
+      test: /\.(js|jsx|ts|tsx)$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: ['next/babel'],
+        },
+      },
+    });
+    
+    return config;
   },
 };
 
