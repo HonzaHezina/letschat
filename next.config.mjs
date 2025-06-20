@@ -1,26 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Completely disable SWC
+  // Disable SWC minification
   swcMinify: false,
   
-  // Force use of Babel
+  // Use Babel instead of SWC
   experimental: {
     forceSwcTransforms: false,
   },
   
-  // Webpack configuration to ensure Babel is used
+  // Ensure compatibility with WebContainer environment
+  transpilePackages: [],
+  
   webpack: (config, { dev, isServer }) => {
-    // Force Babel for all JS/TS files
-    config.module.rules.push({
-      test: /\.(js|jsx|ts|tsx)$/,
-      exclude: /node_modules/,
-      use: {
-        loader: 'babel-loader',
-        options: {
-          presets: ['next/babel'],
-        },
-      },
-    });
+    // Fallback for environments where SWC doesn't work
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
     
     return config;
   },
