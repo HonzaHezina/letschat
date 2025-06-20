@@ -7,21 +7,38 @@ module.exports = {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-      },
-      // Add any custom theme extensions here (e.g., colors, fonts, animations)
-      // For LetsChat, we might want specific chat bubble colors or animations
+      // Previous backgroundImage is removed as it's not in the new spec.
+      // If it was meant to be kept, it should be explicitly stated.
+      // For this task, only colors, animations, and keyframes are mentioned as preserved/updated.
       colors: {
-        'primary': '#1E3A8A', // Example primary color (dark blue)
-        'secondary': '#3B82F6', // Example secondary color (blue)
-        'accent': '#F59E0B', // Example accent color (amber)
-        'background': '#F3F4F6', // Example background color (light gray)
-        'text-primary': '#1F2937', // Example primary text color (dark gray)
-        'text-secondary': '#6B7280', // Example secondary text color (gray)
+        'primary': {
+          DEFAULT: '#0D9488', // Teal-600 (New primary)
+          light: '#2DD4BF',   // Teal-400
+          dark: '#0F766E',    // Teal-700
+        },
+        'secondary': { // Using a gray scale for secondary, can be adjusted
+          DEFAULT: '#4B5563', // Gray-600
+          light: '#6B7280',   // Gray-500
+          dark: '#374151',    // Gray-700
+        },
+        'accent': { // An accent color, e.g., for notifications or highlights
+          DEFAULT: '#F59E0B', // Amber-500 (Kept from previous, good accent)
+          light: '#FBBF24',   // Amber-400
+          dark: '#D97706',    // Amber-600
+        },
+        'background': '#FFFFFF', // White background
+        'surface': '#F9FAFB',  // Light gray for card backgrounds, etc. (Gray-50)
+        'text-primary': '#1F2937',    // Dark gray for main text (Gray-800)
+        'text-secondary': '#4B5563', // Medium gray for secondary text (Gray-600)
+        'border-color': '#E5E7EB',    // Light gray for borders (Gray-200)
+        'success': '#10B981', // Green-500
+        'danger': '#EF4444',  // Red-500
+        'warning': '#F97316', // Orange-500
       },
+      // fontFamily: {
+      //  sans: ['Inter', 'sans-serif'], // This makes Inter the default sans font
+      // },
+      // Keep existing animations and keyframes
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
         'slide-in-up': 'slideInUp 0.5s ease-out',

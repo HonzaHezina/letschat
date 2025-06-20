@@ -1,9 +1,10 @@
 "use client";
 
 import React, { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react'; // Using Headless UI for accessibility
-import { X } from 'lucide-react'; // Close icon
-import Button from './Button'; // Reusing our Button component
+import { Dialog, Transition } from '@headlessui/react';
+import { X } from 'lucide-react';
+// Button import is fine as it will use the new styles
+// import Button from './Button';
 
 type ModalProps = {
   isOpen: boolean;
@@ -11,7 +12,7 @@ type ModalProps = {
   title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'; // Added 2xl
 };
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
@@ -20,6 +21,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
     md: 'sm:max-w-md',
     lg: 'sm:max-w-lg',
     xl: 'sm:max-w-xl',
+    '2xl': 'sm:max-w-2xl', // Added 2xl
   };
 
   return (
@@ -34,7 +36,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50" />
+          <div className="fixed inset-0 bg-black bg-opacity-60" /> {/* Darker overlay */}
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -49,22 +51,22 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all`}
+                className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-xl bg-surface p-6 text-left align-middle shadow-2xl transition-all`} // Changed to bg-surface, rounded-xl, shadow-2xl
               >
                 {title && (
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-text-primary flex justify-between items-center">
+                  <Dialog.Title as="h3" className="text-xl font-semibold leading-6 text-text-primary flex justify-between items-center"> {/* Increased title size */}
                     {title}
-                    <button
+                    <button // Using a raw button for close, styled to be minimal
                       onClick={onClose}
-                          className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+                      className="p-1 rounded-full text-text-secondary hover:bg-gray-200 hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-2 focus:ring-offset-surface" // Added offset-surface
                       aria-label="Close modal"
                     >
-                      <X size={24} />
+                      <X size={22} />
                     </button>
                   </Dialog.Title>
                 )}
-                <div className="mt-4">{children}</div>
-                {footer && <div className="mt-6 flex justify-end space-x-3">{footer}</div>}
+                <div className={`mt-4 ${title ? 'pt-2' : ''} text-text-secondary`}>{children}</div>
+                {footer && <div className="mt-6 pt-4 border-t border-border-color flex justify-end space-x-3">{footer}</div>} {/* Added border top to footer */}
               </Dialog.Panel>
             </Transition.Child>
           </div>

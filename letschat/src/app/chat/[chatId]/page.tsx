@@ -164,7 +164,7 @@ export default function ChatPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto p-0 md:p-4 h-full"
+      className="container mx-auto px-2 pt-2 pb-0 md:p-4 h-full" // Added small padding for mobile
     >
       {/* Optionally, add a back button or more chat context here if needed */}
       {/* <Button onClick={() => router.push('/')} variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />} className="mb-2">

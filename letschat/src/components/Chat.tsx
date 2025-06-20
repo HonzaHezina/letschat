@@ -4,29 +4,28 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabase } from '@/contexts/SupabaseProvider';
 import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import toast from 'react-hot-toast';
-import { Send } from 'lucide-react';
-import { motion } from 'framer-motion'; // Add framer-motion
-import Message, { MessageProps as AppMessageProps } from './Message'; // Renamed to avoid conflict
+import { Send, Loader2, AlertTriangle } from 'lucide-react'; // Added Loader2, AlertTriangle
+import Message, { MessageProps as AppMessageProps } from './Message';
 import Input from './ui/Input';
 import Button from './ui/Button';
+import { motion } from 'framer-motion';
 
-// Define the structure of a message as it comes from Supabase
 interface SupabaseMessage {
-  id: string; // Assuming UUID from Supabase
+  id: string;
   chat_id: string;
-  user_id: string; // Anonymous user ID
+  user_id: string;
   content: string;
-  created_at: string; // ISO timestamp
+  created_at: string;
 }
 
 interface ChatProps {
-  chatId: string; // The ID of the current chat room
-  currentUserId: string; // Anonymous ID of the current user
-  chatCode?: string; // Optional: for display purposes
+  chatId: string;
+  currentUserId: string;
+  chatCode?: string;
 }
 
 const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
-  const supabase = useSupabase() as SupabaseClient; // Type assertion for stricter type checking
+  const supabase = useSupabase() as SupabaseClient;
   const [messages, setMessages] = useState<AppMessageProps[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -34,21 +33,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
-  // Mapper function
-  const mapSupabaseMessageToAppMessage = (msg: SupabaseMessage): AppMessageProps => ({
+  const mapSupabaseMessageToAppMessage = useCallback((msg: SupabaseMessage): AppMessageProps => ({
     id: msg.id,
     content: msg.content,
     senderId: msg.user_id,
     currentUserId: currentUserId,
     timestamp: new Date(msg.created_at),
-    // senderDisplayName: `User ${msg.user_id.substring(0,6)}` // Or more sophisticated logic
-  });
+  }), [currentUserId]);
 
-  // Fetch initial messages
   const fetchMessages = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -62,32 +58,26 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
         .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
-
       setMessages(data.map(mapSupabaseMessageToAppMessage));
     } catch (err: any) {
       console.error("Error fetching messages:", err);
-      setError("Nepodařilo se načíst zprávy.");
+      setError("Nepodařilo se načíst zprávy. Zkuste obnovit stránku.");
       toast.error("Nepodařilo se načíst zprávy.");
     } finally {
       setIsLoading(false);
     }
-  }, [supabase, chatId, currentUserId]); // Added currentUserId to dependency array
+  }, [supabase, chatId, mapSupabaseMessageToAppMessage]);
 
   useEffect(() => {
     fetchMessages();
-    scrollToBottom();
   }, [fetchMessages]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if(messages.length > 0) scrollToBottom();
+  }, [messages, scrollToBottom]);
 
-
-  // Set up Supabase real-time subscription
   useEffect(() => {
     if (!supabase || !chatId) return;
-
-    // Clean up previous channel if chatId changes
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
@@ -100,7 +90,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
         (payload) => {
           const newMessagePayload = payload.new as SupabaseMessage;
-          // Add message only if it's not already present (e.g. to avoid duplicates from sender)
           setMessages((prevMessages) => {
             if (prevMessages.find(msg => msg.id === newMessagePayload.id)) {
               return prevMessages;
@@ -115,110 +104,98 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
         }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error(`Subscription error for chat ${chatId}:`, err);
-          setError("Chyba připojení k chatu v reálném čase.");
+          setError("Chyba připojení k chatu v reálném čase. Zprávy se nemusí aktualizovat.");
           toast.error("Chyba připojení k chatu. Zkuste obnovit stránku.");
         }
       });
-
     channelRef.current = channel;
-
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [supabase, chatId, currentUserId]); // Added currentUserId to dependency array
+  }, [supabase, chatId, mapSupabaseMessageToAppMessage]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !supabase || !chatId) return;
-
-    // const tempMessageId = `temp-${Date.now()}`; // Temporary ID for optimistic update
-
-    // Optimistic update (optional, but good for UX)
-    // const optimisticMessage: AppMessageProps = {
-    //   id: tempMessageId,
-    //   content: newMessage,
-    //   senderId: currentUserId,
-    //   currentUserId: currentUserId,
-    //   timestamp: new Date(),
-    // };
-    // setMessages(prev => [...prev, optimisticMessage]);
-
-    const messageToSend = {
-      chat_id: chatId,
-      user_id: currentUserId,
-      content: newMessage.trim(),
-    };
-
-    setNewMessage(''); // Clear input immediately
-
+    const messageToSend = { chat_id: chatId, user_id: currentUserId, content: newMessage.trim() };
+    setNewMessage('');
     try {
       const { error: insertError } = await supabase.from('messages').insert(messageToSend);
-      if (insertError) {
-        throw insertError;
-      }
-      // If not using optimistic updates or if you need to confirm,
-      // the real-time subscription should pick up the new message.
-      // If there was an optimistic update, you might want to remove it here
-      // and wait for the subscription to add the confirmed message,
-      // or update the optimistic message with the real ID from DB.
+      if (insertError) throw insertError;
     } catch (err: any) {
       console.error("Error sending message:", err);
       toast.error("Nepodařilo se odeslat zprávu.");
-      // Rollback optimistic update if it was used
-      // setMessages(prev => prev.filter(msg => msg.id !== tempMessageId));
-      setNewMessage(messageToSend.content); // Put message back in input
+      setNewMessage(messageToSend.content);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center p-10">Načítání zpráv...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-250px)] text-text-secondary">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+        Načítání zpráv...
+      </div>
+    );
   }
 
-  if (error) {
-    return <div className="text-center p-10 text-red-500">{error}</div>;
+  if (error && messages.length === 0) { // Only show full page error if no messages are loaded
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-250px)] text-center p-4">
+        <AlertTriangle size={48} className="text-danger mb-4" />
+        <h2 className="text-xl font-semibold text-danger mb-2">Chyba při načítání chatu</h2>
+        <p className="text-text-secondary mb-6">{error}</p>
+        <Button onClick={fetchMessages} variant="outline">Zkusit znovu</Button>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] max-h-[700px] border rounded-lg shadow-md bg-white">
+    <div className="flex flex-col h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)] max-h-[700px] bg-white rounded-xl shadow-2xl border border-border-color overflow-hidden">
       {chatCode && (
-        <div className="p-3 border-b bg-gray-50 rounded-t-lg">
-          <h2 className="text-lg font-semibold text-text-primary text-center">
-            Chat Kód: <span className="text-primary font-bold">{chatCode}</span>
+        <div className="p-3.5 sm:p-4 border-b border-border-color bg-surface rounded-t-xl">
+          <h2 className="text-lg font-semibold text-primary text-center truncate">
+            Chat Kód: <span className="font-bold">{chatCode}</span>
           </h2>
         </div>
       )}
-      <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 pt-10">
+      <div className="flex-grow overflow-y-auto p-4 space-y-1 bg-background"> {/* Changed bg to background */}
+        {messages.length === 0 && !isLoading && ( // Ensure not loading before showing "no messages"
+          <div className="text-center text-text-secondary pt-10">
             Zatím žádné zprávy. Začněte konverzaci!
           </div>
         )}
-           {messages.map((msg, index) => (
-             <motion.div
-               key={msg.id}
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.3, delay: index * 0.05 }} // Stagger animation
-             >
-               <Message {...msg} />
-             </motion.div>
+        {messages.map((msg, index) => (
+          <motion.div
+            key={msg.id}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: index * 0.03 }}
+          >
+            <Message {...msg} />
+          </motion.div>
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSendMessage} className="p-3 border-t bg-white rounded-b-lg">
-        <div className="flex items-center gap-2">
+      {error && messages.length > 0 && ( // Display non-critical error here if messages are present
+        <div className="p-2 bg-red-50 border-t border-red-200 text-danger text-xs text-center">
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-border-color bg-surface rounded-b-xl">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Napište zprávu..."
-            className="flex-grow"
+            className="flex-grow" // Input itself will grow
             aria-label="Nová zpráva"
+            wrapperClassName="flex-grow" // Ensure input wrapper takes up space
           />
-          <Button type="submit" variant="primary" aria-label="Odeslat zprávu" disabled={!newMessage.trim()}>
+          <Button type="submit" variant="primary" aria-label="Odeslat zprávu" disabled={!newMessage.trim()} size="md"> {/* Ensure button size is appropriate */}
             <Send size={20} />
           </Button>
         </div>

@@ -221,16 +221,16 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
       {/* Manual Code Entry */}
       <form onSubmit={handleManualSubmit} className="mt-6">
         <p className="text-center text-text-secondary my-3">nebo zadejte kód ručně:</p>
-        <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
           <Input
             type="text"
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value.toUpperCase())} // Convert to uppercase for consistency
             placeholder="KÓD CHATU"
             aria-label="Kód chatu"
-            className="flex-grow"
+                wrapperClassName="flex-grow" // Input's wrapper will handle growth
           />
-          <Button type="submit" variant="primary">
+              <Button type="submit" variant="primary" className="sm:w-auto w-full"> {/* Adjusted width for stacking */}
             Připojit
           </Button>
         </div>

@@ -1,11 +1,12 @@
 "use client";
 
 import React from 'react';
-import { motion } from 'framer-motion'; // For animations
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react'; // Consistent loader icon
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'; // Added 'outline'
+  size?: 'sm' | 'md' | 'lg' | 'icon'; // Added 'icon' size
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -21,41 +22,41 @@ const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = "font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-150 ease-in-out flex items-center justify-center";
+  const baseStyles = "font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-150 ease-in-out flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed";
 
+  // Updated variant styles with new color palette
   const variantStyles = {
-    primary: "bg-primary hover:bg-blue-700 text-white focus:ring-primary",
-    secondary: "bg-secondary hover:bg-blue-500 text-white focus:ring-secondary",
-    danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
-    ghost: "bg-transparent hover:bg-gray-200 text-text-primary focus:ring-gray-400 border border-gray-300",
+    primary: "bg-primary hover:bg-primary-dark text-white focus:ring-primary",
+    secondary: "bg-secondary hover:bg-secondary-dark text-white focus:ring-secondary", // Using gray as secondary
+    danger: "bg-danger hover:bg-red-700 text-white focus:ring-danger", // Assuming danger is defined in theme, e.g. red-600
+    ghost: "bg-transparent hover:bg-gray-100 text-text-primary focus:ring-primary-light", // Use primary-light for ghost focus
+    outline: "bg-transparent hover:bg-primary-light hover:text-primary border border-primary text-primary focus:ring-primary-light",
   };
 
   const sizeStyles = {
     sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-base",
-    lg: "px-6 py-3 text-lg",
+    md: "px-5 py-2.5 text-base", // Slightly increased padding
+    lg: "px-7 py-3 text-lg",    // Slightly increased padding
+    icon: "p-2.5", // For icon-only buttons
   };
 
-  const loadingStyles = isLoading ? "opacity-75 cursor-not-allowed" : "";
+  const loadingStyles = isLoading ? "opacity-75 cursor-not-allowed" : ""; // This is combined with disabled:opacity-70, ensure they work together or simplify
 
   return (
     <motion.button
-      whileTap={{ scale: 0.95 }}
+      whileTap={!isLoading && !props.disabled ? { scale: 0.97 } : {}}
       whileHover={!isLoading && !props.disabled ? { scale: 1.03, transition: { duration: 0.1 } } : {}}
       className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${loadingStyles} ${className}`}
       disabled={isLoading || props.disabled}
       {...props}
     >
       {isLoading ? (
-        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+        <Loader2 className="animate-spin h-5 w-5" /> // Consistent loader
       ) : (
         <>
-          {leftIcon && <span className="mr-2">{leftIcon}</span>}
+          {leftIcon && <span className={children ? "mr-2" : ""}>{leftIcon}</span>}
           {children}
-          {rightIcon && <span className="ml-2">{rightIcon}</span>}
+          {rightIcon && <span className={children ? "ml-2" : ""}>{rightIcon}</span>}
         </>
       )}
     </motion.button>

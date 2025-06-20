@@ -4,89 +4,61 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation'; // Keep this if it was there, or ensure it is
-import { SupabaseClient } from '@supabase/supabase-js'; // Keep this
-import { useSupabase } from '@/contexts/SupabaseProvider'; // Keep this
 import QrScanner from '@/components/QrScanner';
 import toast from 'react-hot-toast';
-import { useUserStore } from '@/stores/userStore'; // Import the store
-import { motion } from 'framer-motion'; // Add framer-motion
-
-// Remove or comment out the old getOrCreateUserId function
-// const getOrCreateUserId = (): string => { ... };
+import { useUserStore } from '@/stores/userStore';
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react'; // Using Loader2 for a slightly different spinner
 
 export default function HomePage() {
   const router = useRouter();
   const supabase = useSupabase() as SupabaseClient;
-  // const [userId, setUserId] = useState<string | null>(null); // Remove useState for userId
   const getEnsuredUserId = useUserStore(state => state.getEnsuredUserId);
-  // userId will be null initially if not hydrated yet, then update upon hydration or getEnsuredUserId call.
   const userId = useUserStore(state => state.userId);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For chat joining/creation process
 
   useEffect(() => {
-    // Ensure userId is initialized and available in the store.
-    // This call will trigger an update to the userId state if it was null.
     if (!userId) {
       getEnsuredUserId();
     }
   }, [userId, getEnsuredUserId]);
 
   const handleChatCodeDetected = async (code: string) => {
-    const currentUserId = useUserStore.getState().getEnsuredUserId(); // Get latest ID
-    if (!supabase || !currentUserId) { // Check currentUserId directly
+    const currentUserId = useUserStore.getState().getEnsuredUserId();
+    if (!supabase || !currentUserId) {
       toast.error("Chyba: Klient Supabase nebo ID uživatele není k dispozici.");
       return;
     }
     if (!code.trim()) {
-        toast.error("Kód chatu nemůže být prázdný.");
-        return;
-    }
-
-    // Ensure userId is available before proceeding with Supabase calls
-    // This is a double check, as currentUserId above should be set.
-    if (!currentUserId) {
-        toast.error("ID uživatele se stále inicializuje. Zkuste to prosím znovu.");
-        return;
+      toast.error("Kód chatu nemůže být prázdný.");
+      return;
     }
 
     setIsLoading(true);
-    toast.loading("Hledání nebo vytváření chatu...");
+    const toastId = toast.loading("Hledání nebo vytváření chatu...");
 
     try {
-      // 1. Try to find an existing chat with this code
-      // Use currentUserId obtained from the store
       let { data: existingChat, error: findError } = await supabase
         .from('chats')
         .select('id, chat_code, expires_at')
-        .eq('chat_code', code.toUpperCase()) // Ensure code is consistently cased
+        .eq('chat_code', code.toUpperCase())
         .single();
 
-      if (findError && findError.code !== 'PGRST116') { // PGRST116: "single row not found"
+      if (findError && findError.code !== 'PGRST116') {
         throw findError;
       }
 
       if (existingChat) {
-        // Check if chat is expired
         if (new Date(existingChat.expires_at) < new Date()) {
-          toast.dismiss();
-          toast.error("Tento chat vypršel a již není dostupný.");
-          // Optionally, delete the expired chat or mark it as inactive
-          // await supabase.from('chats').delete().eq('id', existingChat.id);
+          toast.error("Tento chat vypršel a již není dostupný.", { id: toastId });
           setIsLoading(false);
           return;
         }
-        toast.dismiss();
-        toast.success(`Připojování k chatu: ${existingChat.chat_code}`);
+        toast.success(`Připojování k chatu: ${existingChat.chat_code}`, { id: toastId });
         router.push(`/chat/${existingChat.id}`);
       } else {
-        // 2. If not found, create a new chat
-        const newChatCode = code.toUpperCase(); // Use the user-provided code if it's for a new chat
-        // Or generate a new one if you don't want users to create arbitrary codes:
-        // const newChatCode = uuidv4().substring(0, 8).toUpperCase();
-
-        const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours from now
-
+        const newChatCode = code.toUpperCase();
+        const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         const { data: newChat, error: createError } = await supabase
           .from('chats')
           .insert({ chat_code: newChatCode, expires_at: expires_at })
@@ -94,64 +66,101 @@ export default function HomePage() {
           .single();
 
         if (createError) {
-          if (createError.code === '23505') { // Unique violation for chat_code
-             toast.dismiss();
-             toast.error(`Chat s kódem ${newChatCode} již existuje nebo došlo ke konfliktu. Zkuste jiný kód.`);
-             // Attempt to fetch this chat again as it might have been created by another request simultaneously
-             handleChatCodeDetected(newChatCode); // Retry with the same code
-             return;
+          if (createError.code === '23505') { // Unique constraint violation
+            // Attempt to fetch this chat again, could be a race condition
+            const { data: raceChat, error: raceError } = await supabase
+              .from('chats')
+              .select('id, chat_code, expires_at')
+              .eq('chat_code', newChatCode)
+              .single();
+
+            if (raceError && raceError.code !== 'PGRST116') throw raceError;
+
+            if (raceChat) {
+               if (new Date(raceChat.expires_at) < new Date()) {
+                 toast.error("Tento chat vypršel a již není dostupný.", { id: toastId });
+                 setIsLoading(false); return;
+               }
+               toast.success(`Připojování k existujícímu chatu: ${raceChat.chat_code}`, { id: toastId });
+               router.push(`/chat/${raceChat.id}`);
+               return; // Important: exit after handling race condition successfully
+            } else {
+              // If still not found after unique violation, then it's a genuine problem or a very quick expiration
+              toast.error(`Chat s kódem ${newChatCode} nelze vytvořit, možná již existuje a vypršel, nebo zkuste jiný kód.`, { id: toastId });
+              setIsLoading(false);
+              return;
+            }
           }
-          throw createError;
+          throw createError; // Re-throw other creation errors
         }
 
         if (newChat) {
-          toast.dismiss();
-          toast.success(`Nový chat "${newChat.chat_code}" vytvořen!`);
+          toast.success(`Nový chat "${newChat.chat_code}" vytvořen!`, { id: toastId });
           router.push(`/chat/${newChat.id}`);
         } else {
+          // This case should ideally be caught by createError handling
           throw new Error("Nepodařilo se vytvořit nový chat.");
         }
       }
     } catch (error: any) {
-      toast.dismiss();
+      // Ensure toastId is dismissed only if it hasn't been updated by a success/error toast
+      // Most specific errors above already handle toastId. This is a fallback.
+      if (toastId) toast.dismiss(toastId);
       console.error("Chyba při zpracování kódu chatu:", error);
       toast.error(`Chyba: ${error.message || "Nelze se připojit k chatu."}`);
     } finally {
+      // Only set isLoading to false if not navigating or if an error occurred before navigation
+      // If navigation is successful, the component will unmount.
+      // To prevent brief UI flicker if navigation is slightly delayed:
+      // Check if we are still on the same page.
+      // However, router.push is async, so this check is not straightforward.
+      // For simplicity, we set it here. If navigation occurs, unmount handles it.
       setIsLoading(false);
     }
   };
 
-  if (!userId && typeof window !== 'undefined') { // Check for userId, but allow SSR pass-through
-    // The useEffect above will trigger getEnsuredUserId, which then updates userId.
-    // This state might show briefly.
-    return <div className="flex justify-center items-center min-h-screen">Načítání uživatele...</div>;
+  if (!userId && typeof window !== 'undefined') {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] text-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-text-secondary">Načítání uživatelského sezení...</p>
+      </div>
+    );
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto px-4 py-8 flex flex-col items-center"
+      className="flex flex-col items-center justify-center text-center py-8 md:py-12" // Added vertical padding
     >
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-primary mb-2">Vítejte v LetsChat!</h1>
-        <p className="text-lg text-text-secondary">
-          Naskenujte QR kód nebo zadejte kód pro připojení k anonymnímu chatu.
+      <div className="bg-surface p-6 sm:p-8 md:p-10 rounded-xl shadow-xl max-w-lg w-full">
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">
+          Vítejte v LetsChat!
+        </h1>
+        <p className="text-md sm:text-lg text-text-secondary mb-2">
+          Chcete věnovat Let‘s Chatku nebo někdo ji věnoval vám?
         </p>
-        <p className="text-sm text-gray-500 mt-1">Chaty automaticky vyprší po 24 hodinách.</p>
+        <p className="text-md sm:text-lg text-text-secondary mb-6">
+          Držíte ji v ruce? Zadejte její kód a začněte chatovat.
+        </p>
+
+        <div className="mb-6">
+          <QrScanner onCodeDetected={handleChatCodeDetected} autoStart={false} />
+        </div>
+
+        <p className="text-xs text-gray-500 mt-4">
+          Pro opakovaný vstup do chatu použijte stejný kód LetsChatky.
+          Chaty automaticky vyprší po 24 hodinách.
+        </p>
       </div>
 
-      <QrScanner onCodeDetected={handleChatCodeDetected} autoStart={false} />
-
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-5 rounded-lg shadow-xl flex items-center">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Zpracovávání...
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100]">
+          <div className="bg-surface p-6 rounded-lg shadow-2xl flex items-center space-x-3">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-text-primary">Zpracovávání...</span>
           </div>
         </div>
       )}
