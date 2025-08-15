@@ -8,7 +8,7 @@ import { User } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<{ full_name: string; gender: string } | null>(null);

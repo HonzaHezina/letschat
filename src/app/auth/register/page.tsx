@@ -13,7 +13,7 @@ export default function RegisterPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [gender, setGender] = useState('');
   const [loading, setLoading] = useState(false);
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -103,8 +103,8 @@ export default function RegisterPage() {
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
           </div>
           <div>
-            <label htmlFor="password" required className="text-sm font-medium text-gray-700">Heslo</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">Heslo</label>
+            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" />
           </div>
           <div>

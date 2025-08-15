@@ -19,7 +19,7 @@ interface ChatDetails {
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
-  const { supabase } = useSupabase() as { supabase: SupabaseClient };
+  const supabase = useSupabase();
 
   const chatId = typeof params.chatId === 'string' ? params.chatId : null;
   const [currentUser, setCurrentUser] = useState<User | null>(null);

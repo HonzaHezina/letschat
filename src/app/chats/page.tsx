@@ -17,7 +17,7 @@ interface Chat {
 }
 
 export default function ChatsPage() {
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);

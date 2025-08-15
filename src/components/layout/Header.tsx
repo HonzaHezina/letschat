@@ -6,7 +6,7 @@ import { useSupabase } from '@/contexts/SupabaseProvider';
 import { User } from '@supabase/supabase-js';
 
 export default function Header() {
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +41,11 @@ export default function Header() {
     <header className="bg-white shadow-md">
       <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
         <Link href="/" className="text-xl font-bold text-gray-800">
-          Let'sChat
+          Let&apos;sChat
         </Link>
         <div className="hidden md:flex items-center space-x-4">
           <Link href="/#what-is-letschat" className="text-gray-600 hover:text-indigo-600">
-            Co je Let's Chat
+            Co je Let&apos;s Chat
           </Link>
           {loading ? (
             <div className="animate-pulse h-6 w-24 bg-gray-200 rounded"></div>
