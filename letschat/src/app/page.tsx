@@ -1,169 +1,208 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
-import { SupabaseClient } from '@supabase/supabase-js';
-import QrScanner from '@/components/QrScanner';
 import toast from 'react-hot-toast';
-import { useUserStore } from '@/stores/userStore';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react'; // Using Loader2 for a slightly different spinner
+import { Loader2, ArrowRight, Plus, Printer, Star } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
+
+// Helper to generate a random code
+const generateChatCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+};
+
 
 export default function HomePage() {
   const router = useRouter();
-  const supabase = useSupabase() as SupabaseClient;
-  const getEnsuredUserId = useUserStore(state => state.getEnsuredUserId);
-  const userId = useUserStore(state => state.userId);
-  const [isLoading, setIsLoading] = useState(false); // For chat joining/creation process
+  const { supabase } = useSupabase();
+  const [chatCode, setChatCode] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    if (!userId) {
-      getEnsuredUserId();
-    }
-  }, [userId, getEnsuredUserId]);
-
-  const handleChatCodeDetected = async (code: string) => {
-    const currentUserId = useUserStore.getState().getEnsuredUserId();
-    if (!supabase || !currentUserId) {
-      toast.error("Chyba: Klient Supabase nebo ID uživatele není k dispozici.");
+  const handleJoinChat = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!chatCode.trim()) {
+      toast.error("Zadejte kód chatu.");
       return;
     }
-    if (!code.trim()) {
-      toast.error("Kód chatu nemůže být prázdný.");
-      return;
-    }
-
-    setIsLoading(true);
-    const toastId = toast.loading("Hledání nebo vytváření chatu...");
+    setIsJoining(true);
+    const toastId = toast.loading("Hledání chatu...");
 
     try {
-      let { data: existingChat, error: findError } = await supabase
-        .from('chats')
-        .select('id, chat_code, expires_at')
-        .eq('chat_code', code.toUpperCase())
-        .single();
-
-      if (findError && findError.code !== 'PGRST116') {
-        throw findError;
-      }
-
-      if (existingChat) {
-        if (new Date(existingChat.expires_at) < new Date()) {
-          toast.error("Tento chat vypršel a již není dostupný.", { id: toastId });
-          setIsLoading(false);
-          return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            toast.error("Pro připojení k chatu se musíte přihlásit.", { id: toastId });
+            router.push('/auth/login');
+            return;
         }
-        toast.success(`Připojování k chatu: ${existingChat.chat_code}`, { id: toastId });
-        router.push(`/chat/${existingChat.id}`);
-      } else {
-        const newChatCode = code.toUpperCase();
-        const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        const { data: newChat, error: createError } = await supabase
-          .from('chats')
-          .insert({ chat_code: newChatCode, expires_at: expires_at })
-          .select('id, chat_code')
-          .single();
 
-        if (createError) {
-          if (createError.code === '23505') { // Unique constraint violation
-            // Attempt to fetch this chat again, could be a race condition
-            const { data: raceChat, error: raceError } = await supabase
-              .from('chats')
-              .select('id, chat_code, expires_at')
-              .eq('chat_code', newChatCode)
-              .single();
+        const { data: existingChat, error } = await supabase
+            .from('chats')
+            .select('id, chat_code, expires_at')
+            .eq('chat_code', chatCode.toUpperCase())
+            .single();
 
-            if (raceError && raceError.code !== 'PGRST116') throw raceError;
+        if (error && error.code !== 'PGRST116') throw error;
 
-            if (raceChat) {
-               if (new Date(raceChat.expires_at) < new Date()) {
-                 toast.error("Tento chat vypršel a již není dostupný.", { id: toastId });
-                 setIsLoading(false); return;
-               }
-               toast.success(`Připojování k existujícímu chatu: ${raceChat.chat_code}`, { id: toastId });
-               router.push(`/chat/${raceChat.id}`);
-               return; // Important: exit after handling race condition successfully
-            } else {
-              // If still not found after unique violation, then it's a genuine problem or a very quick expiration
-              toast.error(`Chat s kódem ${newChatCode} nelze vytvořit, možná již existuje a vypršel, nebo zkuste jiný kód.`, { id: toastId });
-              setIsLoading(false);
-              return;
+        if (existingChat) {
+            if (new Date(existingChat.expires_at) < new Date()) {
+                toast.error("Tento chat vypršel.", { id: toastId });
+                return;
             }
-          }
-          throw createError; // Re-throw other creation errors
-        }
-
-        if (newChat) {
-          toast.success(`Nový chat "${newChat.chat_code}" vytvořen!`, { id: toastId });
-          router.push(`/chat/${newChat.id}`);
+            toast.success(`Připojování k chatu: ${existingChat.chat_code}`, { id: toastId });
+            router.push(`/chat/${existingChat.id}`);
         } else {
-          // This case should ideally be caught by createError handling
-          throw new Error("Nepodařilo se vytvořit nový chat.");
+            toast.error("Chat s tímto kódem nebyl nalezen.", { id: toastId });
         }
-      }
     } catch (error: any) {
-      // Ensure toastId is dismissed only if it hasn't been updated by a success/error toast
-      // Most specific errors above already handle toastId. This is a fallback.
-      if (toastId) toast.dismiss(toastId);
-      console.error("Chyba při zpracování kódu chatu:", error);
-      toast.error(`Chyba: ${error.message || "Nelze se připojit k chatu."}`);
+        toast.error(`Chyba: ${error.message}`, { id: toastId });
     } finally {
-      // Only set isLoading to false if not navigating or if an error occurred before navigation
-      // If navigation is successful, the component will unmount.
-      // To prevent brief UI flicker if navigation is slightly delayed:
-      // Check if we are still on the same page.
-      // However, router.push is async, so this check is not straightforward.
-      // For simplicity, we set it here. If navigation occurs, unmount handles it.
-      setIsLoading(false);
+        setIsJoining(false);
     }
   };
 
-  if (!userId && typeof window !== 'undefined') {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-text-secondary">Načítání uživatelského sezení...</p>
+  const handleCreateChat = async () => {
+    setIsCreating(true);
+    const toastId = toast.loading("Vytváření nového chatu...");
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            toast.error("Pro vytvoření chatu se musíte přihlásit.", { id: toastId });
+            router.push('/auth/login');
+            return;
+        }
+
+        const newChatCode = generateChatCode();
+        const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+        const { data: newChat, error } = await supabase
+            .from('chats')
+            .insert({
+                chat_code: newChatCode,
+                expires_at: expires_at,
+                created_by: user.id
+            })
+            .select('id, chat_code')
+            .single();
+
+        if (error) throw error;
+
+        if (newChat) {
+            toast.success(`Nový chat "${newChat.chat_code}" vytvořen!`, { id: toastId });
+            router.push(`/chat/${newChat.id}`);
+        } else {
+            throw new Error("Nepodařilo se vytvořit chat.");
+        }
+
+    } catch (error: any) {
+        toast.error(`Chyba: ${error.message}`, { id: toastId });
+    } finally {
+        setIsCreating(false);
+    }
+  };
+
+
+  const Card = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
+    <motion.div
+        className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center"
+        whileHover={{ y: -5, scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 300 }}
+    >
+      <div className="p-3 bg-indigo-100 rounded-full mb-4">
+        {icon}
       </div>
-    );
-  }
+      <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+      <div className="text-gray-600">{children}</div>
+    </motion.div>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center text-center py-8 md:py-12" // Added vertical padding
-    >
-      <div className="bg-surface p-6 sm:p-8 md:p-10 rounded-xl shadow-xl max-w-lg w-full">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">
-          Vítejte v LetsChat!
-        </h1>
-        <p className="text-md sm:text-lg text-text-secondary mb-2">
-          Chcete věnovat Let‘s Chatku nebo někdo ji věnoval vám?
-        </p>
-        <p className="text-md sm:text-lg text-text-secondary mb-6">
-          Držíte ji v ruce? Zadejte její kód a začněte chatovat.
-        </p>
+    <div className="space-y-16 py-8">
+      {/* Hero Section */}
+      <section className="text-center">
+        <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
+        >
+          Vítejte v Let's Chat
+        </motion.h1>
+        <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="max-w-2xl mx-auto text-lg text-gray-600"
+        >
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis porttitor metus at tempus. Quisque dictum sem tellus.
+        </motion.p>
+      </section>
 
-        <div className="mb-6">
-          <QrScanner onCodeDetected={handleChatCodeDetected} autoStart={false} />
+      {/* Main Action Sections */}
+      <section className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        {/* Chci LetsChatku */}
+        <div className="bg-indigo-600 text-white p-8 rounded-lg shadow-xl flex flex-col justify-center items-center text-center">
+            <h2 className="text-2xl font-bold mb-3">Chci Let's Chatku</h2>
+            <p className="mb-4">Vytvořte si novou soukromou chatovací místnost.</p>
+            <button
+                onClick={handleCreateChat}
+                disabled={isCreating}
+                className="bg-yellow-400 text-indigo-800 font-bold py-3 px-6 rounded-full hover:bg-yellow-300 transition-colors disabled:bg-yellow-200 flex items-center"
+            >
+                {isCreating ? <Loader2 className="animate-spin mr-2" /> : null}
+                {isCreating ? 'Vytváření...' : "Vytvořit nový chat"}
+            </button>
         </div>
 
-        <p className="text-xs text-gray-500 mt-4">
-          Pro opakovaný vstup do chatu použijte stejný kód LetsChatky.
-          Chaty automaticky vyprší po 24 hodinách.
-        </p>
-      </div>
+        {/* Uz mam LetsChatku */}
+        <div className="bg-gray-100 p-8 rounded-lg shadow-xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Už mám Let's Chatku</h2>
+            <p className="mb-4 text-gray-600">Zadejte kód a vstupte do existujícího chatu.</p>
+            <form onSubmit={handleJoinChat} className="flex items-center">
+                <input
+                    type="text"
+                    placeholder="Zadejte platný kód"
+                    value={chatCode}
+                    onChange={(e) => setChatCode(e.target.value)}
+                    className="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button type="submit" disabled={isJoining} className="px-4 py-2 bg-indigo-600 text-white rounded-r-md hover:bg-indigo-700 disabled:bg-indigo-400 flex items-center justify-center w-12 h-10">
+                    {isJoining ? <Loader2 className="animate-spin" /> : <ArrowRight />}
+                </button>
+            </form>
+        </div>
+      </section>
 
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[100]">
-          <div className="bg-surface p-6 rounded-lg shadow-2xl flex items-center space-x-3">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-text-primary">Zpracovávání...</span>
+      {/* Additional Options */}
+      <section className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card icon={<Printer className="w-8 h-8 text-indigo-600" />} title="Let's Chatku si vytisknu sám">
+                <p>Popis pro tisk.</p>
+            </Card>
+            <Card icon={<Star className="w-8 h-8 text-indigo-600" />} title="Chci si objednat profi Let's Chatku">
+                <p>Popis pro profi objednávku.</p>
+            </Card>
+            <Card icon={<Plus className="w-8 h-8 text-indigo-600" />} title="Chci pouze kód pro seznámení">
+                <p>Popis pro kód.</p>
+            </Card>
           </div>
-        </div>
-      )}
-    </motion.div>
+      </section>
+
+      {/* What is LetsChat Section */}
+      <section id="what-is-letschat" className="text-center max-w-3xl mx-auto">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Co je to Let's Chatka a k čemu slouží?</h2>
+        <p className="text-gray-600">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+        </p>
+      </section>
+    </div>
   );
 }

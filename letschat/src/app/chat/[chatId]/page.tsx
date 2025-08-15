@@ -3,16 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
-import { SupabaseClient } from '@supabase/supabase-js';
-import Chat from '@/components/Chat'; // Your Chat component
+import { User, SupabaseClient } from '@supabase/supabase-js';
+import Chat from '@/components/Chat';
 import toast from 'react-hot-toast';
-import { ArrowLeft, XCircle } from 'lucide-react'; // Added XCircle
-import Button from '@/components/ui/Button'; // Your Button component
-import { useUserStore } from '@/stores/userStore'; // Import the store
-import { motion } from 'framer-motion'; // Add framer-motion
-
-// Remove or comment out the old getUserIdFromStorage function
-// const getUserIdFromStorage = (): string | null => { ... };
+import { ArrowLeft, XCircle, Loader2 } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import { motion } from 'framer-motion';
 
 interface ChatDetails {
   id: string;
@@ -23,65 +19,33 @@ interface ChatDetails {
 export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
-  const supabase = useSupabase() as SupabaseClient;
+  const { supabase } = useSupabase() as { supabase: SupabaseClient };
 
   const chatId = typeof params.chatId === 'string' ? params.chatId : null;
-  // const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Remove useState
-  const getEnsuredUserId = useUserStore(state => state.getEnsuredUserId);
-  const currentUserId = useUserStore(state => state.userId); // Get userId
-
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start true to load user ID and then chat details
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Ensure userId is initialized and available.
-    if (!currentUserId) {
-      const id = getEnsuredUserId();
-      if (!id) {
-        // This case should ideally not happen if getEnsuredUserId works correctly
-        // and store initialization logic is sound.
-        toast.error("Chybí ID uživatele. Vraťte se na domovskou stránku.");
-        router.replace('/');
-        return;
-      }
-      // The component will re-render once currentUserId is populated from the store.
-    }
-  }, [currentUserId, getEnsuredUserId, router]);
-
-  useEffect(() => {
-    // This effect now depends on currentUserId being populated from the store.
-    // It will run once currentUserId is available.
-    if (!currentUserId && typeof window !== 'undefined') {
-      // If still no userId after the first effect (which should set it),
-      // it implies an issue or delay. We show loading or an error.
-      // The initial isLoading state is true, so this might not be strictly needed here,
-      // as the main loading block will cover it.
-      setIsLoading(true); // Ensure loading is true if currentUserId isn't ready
-      return;
-    }
-
-    if (!chatId || !supabase) {
-      if (!chatId) {
-         setError("Chybí ID chatu.");
-      } else {
-         setError("Supabase klient není k dispozici."); // Should not happen if context is setup
-      }
-      setIsLoading(false);
-      return;
-    }
-
-    // At this point, currentUserId should be available. If not, it's an issue.
-    if (!currentUserId) {
-        setError("ID uživatele není k dispozici. Zkuste obnovit stránku.");
+    const init = async () => {
+      if (!supabase || !chatId) {
+        setError(chatId ? "Supabase client not available." : "Chat ID is missing.");
         setIsLoading(false);
         return;
-    }
+      }
 
-    setIsLoading(true); // Explicitly set loading for chat details fetch
-    setError(null);
+      // 1. Check for authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const fetchChatDetails = async () => {
+      if (authError || !user) {
+        toast.error("Pro přístup k chatu se musíte přihlásit.");
+        router.replace('/auth/login');
+        return;
+      }
+      setCurrentUser(user);
+
+      // 2. Fetch chat details
       try {
         const { data, error: fetchError } = await supabase
           .from('chats')
@@ -90,44 +54,33 @@ export default function ChatPage() {
           .single();
 
         if (fetchError) {
-          if (fetchError.code === 'PGRST116') { // Not found
-            throw new Error("Chat nebyl nalezen.");
-          }
-          throw fetchError; // Other Supabase errors
+          if (fetchError.code === 'PGRST116') throw new Error("Chat nebyl nalezen.");
+          throw fetchError;
         }
 
-        if (!data) {
-          throw new Error("Chat nebyl nalezen.");
-        }
+        if (!data) throw new Error("Chat nebyl nalezen.");
 
         if (new Date(data.expires_at) < new Date()) {
           throw new Error("Tento chat vypršel.");
         }
 
         setChatDetails(data);
-
       } catch (err: any) {
-        console.error("Chyba při načítání detailů chatu:", err);
-        setError(err.message || "Nepodařilo se načíst chat.");
-        toast.error(err.message || "Nepodařilo se načíst chat.");
-        // Optional: redirect after a delay if chat is invalid
-        // setTimeout(() => router.replace('/'), 3000);
+        console.error("Error loading chat details:", err);
+        setError(err.message || "Failed to load chat.");
+        toast.error(err.message || "Failed to load chat.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchChatDetails();
-
-  }, [chatId, supabase, router, currentUserId]);
+    init();
+  }, [chatId, supabase, router]);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center">
-        <svg className="animate-spin h-10 w-10 text-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="animate-spin h-10 w-10 text-indigo-600 mb-4" />
         Načítání chatu...
       </div>
     );
@@ -135,24 +88,24 @@ export default function ChatPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center">
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)] p-4 text-center">
         <XCircle size={48} className="text-red-500 mb-4" />
         <h2 className="text-xl font-semibold text-red-500 mb-2">Chyba</h2>
-        <p className="text-text-secondary mb-6">{error}</p>
-        <Button onClick={() => router.push('/')} leftIcon={<ArrowLeft size={18}/>}>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <Button onClick={() => router.push('/')}>
+          <ArrowLeft size={18} className="mr-2"/>
           Zpět na domovskou stránku
         </Button>
       </div>
     );
   }
 
-  if (!chatDetails || !currentUserId) {
-    // This case should ideally be caught by isLoading or error states,
-    // but as a fallback:
+  if (!chatDetails || !currentUser) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center">
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)]">
         <p>Něco se pokazilo. Zkuste to prosím znovu.</p>
-        <Button onClick={() => router.push('/')} leftIcon={<ArrowLeft size={18}/>} className="mt-4">
+        <Button onClick={() => router.push('/')} className="mt-4">
+          <ArrowLeft size={18} className="mr-2"/>
           Zpět na domovskou stránku
         </Button>
       </div>
@@ -164,15 +117,11 @@ export default function ChatPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto px-2 pt-2 pb-0 md:p-4 h-full" // Added small padding for mobile
+      className="h-full"
     >
-      {/* Optionally, add a back button or more chat context here if needed */}
-      {/* <Button onClick={() => router.push('/')} variant="ghost" size="sm" leftIcon={<ArrowLeft size={16} />} className="mb-2">
-        Nové skenování / Kód
-      </Button> */}
       <Chat
         chatId={chatDetails.id}
-        currentUserId={currentUserId}
+        currentUserId={currentUser.id}
         chatCode={chatDetails.chat_code}
       />
     </motion.div>
