@@ -21,7 +21,7 @@ const generateChatCode = () => {
 
 export default function HomePage() {
   const router = useRouter();
-  const { supabase } = useSupabase();
+  const supabase = useSupabase();
   const [chatCode, setChatCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -134,7 +134,7 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
             className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
         >
-          Vítejte v Let's Chat
+          Vítejte v Let&apos;s Chat
         </motion.h1>
         <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -150,7 +150,7 @@ export default function HomePage() {
       <section className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {/* Chci LetsChatku */}
         <div className="bg-indigo-600 text-white p-8 rounded-lg shadow-xl flex flex-col justify-center items-center text-center">
-            <h2 className="text-2xl font-bold mb-3">Chci Let's Chatku</h2>
+            <h2 className="text-2xl font-bold mb-3">Chci Let&apos;s Chatku</h2>
             <p className="mb-4">Vytvořte si novou soukromou chatovací místnost.</p>
             <button
                 onClick={handleCreateChat}
@@ -164,7 +164,7 @@ export default function HomePage() {
 
         {/* Uz mam LetsChatku */}
         <div className="bg-gray-100 p-8 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">Už mám Let's Chatku</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Už mám Let&apos;s Chatku</h2>
             <p className="mb-4 text-gray-600">Zadejte kód a vstupte do existujícího chatu.</p>
             <form onSubmit={handleJoinChat} className="flex items-center">
                 <input
@@ -198,7 +198,7 @@ export default function HomePage() {
 
       {/* What is LetsChat Section */}
       <section id="what-is-letschat" className="text-center max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Co je to Let's Chatka a k čemu slouží?</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Co je to Let&apos;s Chatka a k čemu slouží?</h2>
         <p className="text-gray-600">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
         </p>
