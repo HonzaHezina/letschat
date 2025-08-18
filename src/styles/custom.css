@@ -1,0 +1,30 @@
+/*
+  This file contains custom CSS rules that are difficult or inefficient
+  to replicate with Tailwind's utility-first approach.
+*/
+
+/* Header styles from the original CSS */
+.header .content::after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  left: 100%;
+  display: block;
+  width: 200%;
+  height: 90px;
+  background-color: #7d1d5d; /* This is theme('colors.primary') */
+}
+
+/* Specific wave background for a header list item */
+.header nav ul > li.wave {
+  display: block;
+  width: 100px;
+  height: 90px;
+  background-color: transparent;
+  background-image: url('/media/custom/header-wave.svg');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Other complex styles can be added here as needed */

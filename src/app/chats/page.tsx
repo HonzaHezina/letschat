@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { User } from '@supabase/supabase-js';
-import { Loader2, MessageSquare, PlusCircle } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface Chat {
   id: string;
   chat_code: string;
-  expires_at: string;
+  created_at: string;
 }
 
 export default function ChatsPage() {
@@ -26,16 +26,12 @@ export default function ChatsPage() {
   const fetchChats = useCallback(async (currentUser: User) => {
     if (!supabase) return;
     try {
-      // For now, we fetch chats created by the user.
-      // A more complex app would have a participants table.
       const { data, error } = await supabase
         .from('chats')
-        .select('id, chat_code, expires_at')
+        .select('id, chat_code, created_at')
         .eq('created_by', currentUser.id)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
-
       setChats(data || []);
     } catch (error: any) {
       toast.error(`Chyba při načítání chatů: ${error.message}`);
@@ -61,44 +57,42 @@ export default function ChatsPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <Loader2 className="w-12 h-12 animate-spin text-indigo-600" />
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Moje chaty</h1>
-        <Link href="/" className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-          <PlusCircle className="w-5 h-5 mr-2" />
-          Vytvořit/Připojit se
-        </Link>
-      </div>
-
-      {chats.length === 0 ? (
-        <div className="text-center bg-white p-12 rounded-lg shadow-md">
-          <MessageSquare className="w-16 h-16 mx-auto text-gray-300" />
-          <h2 className="mt-4 text-xl font-semibold text-gray-800">Zatím žádné chaty</h2>
-          <p className="mt-2 text-gray-500">Vytvořte si nový chat nebo se k nějakému připojte na hlavní stránce.</p>
+    <div className="page full">
+        <div className="wave"></div>
+        <div className="content">
+            <h1>Moje chaty</h1>
+            <div className="chats">
+                {chats.length === 0 ? (
+                    <p>Zatím nemáte žádné aktivní chaty. Nový můžete vytvořit na hlavní stránce.</p>
+                ) : (
+                    chats.map(chat => (
+                        <div key={chat.id} className="item">
+                            <div className="image">
+                                <div className="overlay">
+                                    <div className="content cover" style={{backgroundImage: "url('/media/custom/chat-icon.webp')"}}></div>
+                                </div>
+                            </div>
+                            <div className="content">
+                                <h3>{chat.chat_code}</h3>
+                                <div className="created">
+                                    Vytvořeno: {format(new Date(chat.created_at), 'd. M. yyyy', { locale: cs })}
+                                </div>
+                                <Link href={`/chat/${chat.id}`} className="enter">Vstoupit do chatu</Link>
+                            </div>
+                            <ul className="action">
+                                {/* Action icons can be added here */}
+                            </ul>
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {chats.map((chat) => (
-            <Link href={`/chat/${chat.id}`} key={chat.id} className="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-bold text-indigo-700">{chat.chat_code}</h2>
-                  <p className="text-sm text-gray-500">
-                    Vyprší za {formatDistanceToNow(new Date(chat.expires_at), { addSuffix: true, locale: cs })}
-                  </p>
-                </div>
-                <span className="text-indigo-600 hover:text-indigo-800">Vstoupit do chatu &rarr;</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
