@@ -4,11 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '@/contexts/SupabaseProvider';
 import { User } from '@supabase/supabase-js';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Header() {
   const supabase = useSupabase();
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMenuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -23,57 +27,86 @@ export default function Header() {
 
     const { data: authListener } = supabase?.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === 'SIGNED_OUT') {
+        router.push('/');
+      }
     }) ?? {};
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, router]);
 
   const handleLogout = async () => {
     if (supabase) {
       await supabase.auth.signOut();
-      setUser(null);
     }
+    setMenuOpen(false);
   };
 
+  const NavLink = ({ href, title, iconClass }: { href: string, title: string, iconClass: string }) => (
+    <li>
+      <span className={`icon menu ${iconClass}`}></span>
+      <Link href={href} title={title} className={pathname === href ? 'active' : ''} onClick={() => setMenuOpen(false)}>
+        {title}
+      </Link>
+    </li>
+  );
+
+  const AuthLinks = () => (
+    <>
+      {user ? (
+        <>
+          <NavLink href="/profile" title="Profil" iconClass="icon-profile" />
+          <NavLink href="/chats" title="Moje Chaty" iconClass="icon-chats" />
+          <li className="logged">
+            <span className="icon menu icon-logout"></span>
+            <a href="#" title="Odhlásit" onClick={handleLogout}>Odhlásit</a>
+          </li>
+        </>
+      ) : (
+        <>
+          <NavLink href="/auth/login" title="Přihlásit" iconClass="icon-login" />
+          <NavLink href="/auth/register" title="Registrace" iconClass="icon-register" />
+        </>
+      )}
+    </>
+  );
+
+
   return (
-    <header className="bg-white shadow-md">
-      <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-gray-800">
-          Let&apos;sChat
-        </Link>
-        <div className="hidden md:flex items-center space-x-4">
-          <Link href="/#what-is-letschat" className="text-gray-600 hover:text-indigo-600">
-            Co je Let&apos;s Chat
-          </Link>
-          {loading ? (
-            <div className="animate-pulse h-6 w-24 bg-gray-200 rounded"></div>
-          ) : user ? (
-            <>
-              <Link href="/profile" className="text-gray-600 hover:text-indigo-600">
-                Profil
-              </Link>
-              <Link href="/chats" className="text-gray-600 hover:text-indigo-600">
-                Moje Chaty
-              </Link>
-              <button onClick={handleLogout} className="text-gray-600 hover:text-indigo-600">
-                Odhlásit
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/auth/login" className="text-gray-600 hover:text-indigo-600">
-                Přihlásit
-              </Link>
-              <Link href="/auth/register" className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
-                Registrace
-              </Link>
-            </>
-          )}
+    <>
+      <header className="header margin">
+        <div className="frame">
+          <div className="content">
+            <Link href="/" className="logo" title="Let's Chat">
+              <img src="/media/custom/header-logo.svg" alt="Let'sChat" title="Let's Chat" />
+            </Link>
+            <nav>
+              <ul className="menu">
+                <li className="wave"></li>
+                <NavLink href="/#what-is-letschat" title="Co je Let's Chat" iconClass="icon-about" />
+                {!loading && <AuthLinks />}
+              </ul>
+              <a id="menu-burger" href="#" className="burger" onClick={(e) => {e.preventDefault(); setMenuOpen(true)}}>
+                <img src="/media/icon/menu.svg" alt="Menu" title="Menu" />
+              </a>
+            </nav>
+          </div>
         </div>
-        {/* Mobile menu can be added here later */}
-      </nav>
-    </header>
+      </header>
+
+      {isMenuOpen && (
+        <div id="menu-box" style={{ display: 'block' }}>
+          <a href="#" className="close" onClick={(e) => {e.preventDefault(); setMenuOpen(false)}}>
+            <img src="/media/icon/close.svg" alt="Zavřít" title="Zavřít" />
+          </a>
+          <ul>
+            <NavLink href="/#what-is-letschat" title="Co je Let's Chat" iconClass="icon-about" />
+            {!loading && <AuthLinks />}
+          </ul>
+        </div>
+      )}
+    </>
   );
 }

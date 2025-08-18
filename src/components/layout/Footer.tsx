@@ -3,16 +3,20 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-800 text-white">
-      <div className="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center">
-        <div className="text-center md:text-left">
-          <p>&copy; {new Date().getFullYear()} Let&apos;s Chat. Vsaď na jednu kartu.</p>
-        </div>
-        <div className="flex mt-4 md:mt-0">
-          <Link href="https://www.letschat.zone" target="_blank" rel="noopener noreferrer" className="px-3 py-1 text-sm text-gray-300 hover:text-white">
-            www.letschat.zone
+    <footer className="footer">
+      <div className="frame">
+        <div className="content">
+          <Link href="/" className="logo" title="Let's Chat">
+            <img src="/media/custom/footer-logo.svg" alt="Let's Chat" title="Let's Chat" />
           </Link>
-          {/* Add other footer links if necessary */}
+          <div className="claim">
+            www.letschat.zone
+            <span>Vsaď na jednu kartu</span>
+          </div>
+          <div className="copy">
+            &copy; {new Date().getFullYear()}<br />
+            Let&apos;s Chat
+          </div>
         </div>
       </div>
     </footer>
