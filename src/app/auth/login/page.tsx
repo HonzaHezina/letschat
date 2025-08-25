@@ -37,7 +37,7 @@ export default function LoginPage() {
       toast.error(error.message);
     } else {
       toast.success('Přihlášení úspěšné!');
-      router.push('/chats');
+      router.push('/dashboard');
     }
     setLoading(false);
   };
