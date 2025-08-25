@@ -2,15 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSupabase } from '@/contexts/SupabaseProvider';
-import { useAnonymousId } from '@/hooks/useAnonymousId';
 import toast from 'react-hot-toast';
-import { Loader2, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function HomePage() {
   const router = useRouter();
-  const supabase = useSupabase();
-  const anonymousId = useAnonymousId();
   const [chatCode, setChatCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,37 +17,92 @@ export default function HomePage() {
       return;
     }
     setIsLoading(true);
-    router.push(`/join/${chatCode}`);
+    router.push(`/join/${chatCode.toUpperCase()}`);
   };
 
-  // Using a simplified version of the new UI for the anonymous-first flow
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-20rem)] text-center">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl">
-        <h1 className="text-2xl font-bold text-primary">Vítejte v LetsChat</h1>
-        <p className="text-gray-600">Zadejte kód z vaší kartičky a začněte chatovat.</p>
+    <>
+      <div className="frame">
+        <div className="box2">
+          <div className="item" style={{ backgroundImage: "url('/media/promo/chat-woman.webp')" }}>
+            <div className="bottom">
+              <img src="/media/box2/wave.svg" className="wave" alt="Let'sChat" />
+              <div className="content">
+                <h2>Chci Let&apos;s&nbsp;Chatku</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis porttitor metus at tempus. Quisque dictum sem tellus, eu hendrerit libero malesuada suscipit.</p>
+                <p>In sit amet neque.</p>
+              </div>
+              <a href="#chci-letschatku" className="arrow scroll" title="Chci Let's Chatku"></a>
+            </div>
+          </div>
 
-        <form onSubmit={handleJoinChat} className="flex items-center">
-          <input
-            type="text"
-            placeholder="Zadejte Váš kód"
-            value={chatCode}
-            onChange={(e) => setChatCode(e.target.value.toUpperCase())}
-            className="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            maxLength={5}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !anonymousId}
-            className="px-5 py-3 bg-primary text-white rounded-r-lg hover:bg-primary-dark disabled:bg-gray-400 flex items-center justify-center w-20 h-[51px]"
-          >
-            {isLoading ? <Loader2 className="animate-spin" /> : <ArrowRight />}
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 mt-4">
-          Pokud jste obdrželi kartičku, zadejte kód a budete spojeni s druhou osobou.
-        </p>
+          <div className="item" style={{ backgroundImage: "url('/media/promo/chat-man.webp')" }}>
+            <div className="bottom">
+              <img src="/media/box2/wave-yellow.svg" className="wave" alt="Let'sChat" />
+              <div className="content yellow">
+                <h2>Už mám Let&apos;s&nbsp;Chatku</h2>
+                <p>Integer a magna sed nisl consectetur ullamcorper semper pretium lacus vitae euismod vel mi.</p>
+                <div className="container input">
+                  <form id="form-code" onSubmit={handleJoinChat} className="form">
+                    <input name="code" type="text" value={chatCode} onChange={(e) => setChatCode(e.target.value)} maxLength={5} placeholder="Zadej kód pro vstup" />
+                    <input type="submit" value="Vstoupit" disabled={isLoading} />
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <div className="frame">
+        <div id="chci-letschatku" className="box4">
+          <Link href="/dashboard" className="item" style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
+            <div className="bottom">
+              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
+              <div className="content">
+                <h2>Let&apos;s&nbsp;Chatku si&nbsp;vytisknu sám</h2>
+              </div>
+              <div className="plus"></div>
+            </div>
+          </Link>
+          <Link href="/dashboard" className="item" style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
+            <div className="bottom">
+              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
+              <div className="content">
+                <h2>Chci si&nbsp;objednat profi Let&apos;s&nbsp;Chatku</h2>
+              </div>
+              <div className="plus"></div>
+            </div>
+          </Link>
+          <Link href="/dashboard" className="item" style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
+            <div className="bottom">
+              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
+              <div className="content">
+                <h2>Chci pouze kód pro seznámení</h2>
+              </div>
+              <div className="plus"></div>
+            </div>
+          </Link>
+          <a href="#" className="item disabled" style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
+            <div className="bottom">
+              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
+              <div className="content">
+                <div className="disabled">Připravujeme</div>
+                <h2>Chci udělat dojem s&nbsp;Let&apos;s&nbsp;Chatku</h2>
+              </div>
+              <div className="plus"></div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div className="frame">
+        <div className="promo">
+          <h2>Co je to Let&apos;s&nbsp;Chatka a&nbsp;k&nbsp;čemu slouží?</h2>
+          <a href="#" className="arrow" title="Co je to Let's Chatka a k čemu slouží?"></a>
+          <img src="/media/promo/cards.webp" className="cards" alt="Co je to Let's Chatka a k čemu slouží" />
+        </div>
+      </div>
+    </>
   );
 }
