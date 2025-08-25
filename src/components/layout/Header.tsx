@@ -11,68 +11,37 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isMenuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (supabase) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-
-    const { data: authListener } = supabase?.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (event === 'SIGNED_OUT') {
-        router.push('/');
-      }
-    }) ?? {};
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [supabase, router]);
+    });
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    await supabase.auth.signOut();
+    router.push('/');
     setMenuOpen(false);
   };
 
-  const NavLink = ({ href, title, iconClass }: { href: string, title: string, iconClass: string }) => (
-    <li>
-      <span className={`icon menu ${iconClass}`}></span>
-      <Link href={href} title={title} className={pathname === href ? 'active' : ''} onClick={() => setMenuOpen(false)}>
-        {title}
-      </Link>
-    </li>
-  );
-
-  const AuthLinks = () => (
+  const NavLinks = () => (
     <>
       {user ? (
         <>
-          <NavLink href="/profile" title="Profil" iconClass="icon-profile" />
-          <NavLink href="/chats" title="Moje Chaty" iconClass="icon-chats" />
-          <li className="logged">
-            <span className="icon menu icon-logout"></span>
-            <a href="#" title="Odhlásit" onClick={handleLogout}>Odhlásit</a>
-          </li>
+          <li><Link href="/dashboard" className={pathname === '/dashboard' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Můj přehled</Link></li>
+          <li><a href="#" onClick={handleLogout}>Odhlásit</a></li>
         </>
       ) : (
         <>
-          <NavLink href="/auth/login" title="Přihlásit" iconClass="icon-login" />
-          <NavLink href="/auth/register" title="Registrace" iconClass="icon-register" />
+          <li><Link href="/auth/login" className={pathname === '/auth/login' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Přihlásit</Link></li>
+          <li><Link href="/auth/register" className={pathname === '/auth/register' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Registrace</Link></li>
         </>
       )}
     </>
   );
-
 
   return (
     <>
@@ -80,30 +49,26 @@ export default function Header() {
         <div className="frame">
           <div className="content">
             <Link href="/" className="logo" title="Let's Chat">
-              <img src="/media/custom/header-logo.svg" alt="Let'sChat" title="Let's Chat" />
+              <img src="/media/custom/header-logo.svg" alt="Let'sChat" />
             </Link>
             <nav>
               <ul className="menu">
-                <li className="wave"></li>
-                <NavLink href="/#what-is-letschat" title="Co je Let's Chat" iconClass="icon-about" />
-                {!loading && <AuthLinks />}
+                <NavLinks />
               </ul>
-              <a id="menu-burger" href="#" className="burger" onClick={(e) => {e.preventDefault(); setMenuOpen(true)}}>
-                <img src="/media/icon/menu.svg" alt="Menu" title="Menu" />
+              <a id="menu-burger" href="#" className="burger" onClick={(e) => { e.preventDefault(); setMenuOpen(!isMenuOpen); }}>
+                <img src="/media/icon/menu.svg" alt="Menu" />
               </a>
             </nav>
           </div>
         </div>
       </header>
-
       {isMenuOpen && (
         <div id="menu-box" style={{ display: 'block' }}>
-          <a href="#" className="close" onClick={(e) => {e.preventDefault(); setMenuOpen(false)}}>
-            <img src="/media/icon/close.svg" alt="Zavřít" title="Zavřít" />
+           <a href="#" className="close" onClick={(e) => {e.preventDefault(); setMenuOpen(false)}}>
+            <img src="/media/icon/close.svg" alt="Zavřít" />
           </a>
           <ul>
-            <NavLink href="/#what-is-letschat" title="Co je Let's Chat" iconClass="icon-about" />
-            {!loading && <AuthLinks />}
+            <NavLinks />
           </ul>
         </div>
       )}
