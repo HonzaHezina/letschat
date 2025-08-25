@@ -3,192 +3,81 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
+import { useAnonymousId } from '@/hooks/useAnonymousId';
 import toast from 'react-hot-toast';
-
-const generateChatCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-};
+import { Loader2, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
   const supabase = useSupabase();
+  const anonymousId = useAnonymousId();
   const [chatCode, setChatCode] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleJoinChat = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!chatCode.trim()) {
-      toast.error("Zadejte platný kód.");
+      toast.error("Zadejte kód chatu.");
       return;
     }
-    setIsJoining(true);
-    const toastId = toast.loading("Hledání chatu...");
+    if (!anonymousId) {
+      toast.error("Chyba při načítání vaší identity. Zkuste prosím obnovit stránku.");
+      return;
+    }
+
+    setIsLoading(true);
+    const toastId = toast.loading("Vstupuji do místnosti...");
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            toast.error("Pro připojení k chatu se musíte přihlásit.", { id: toastId });
-            router.push('/auth/login');
-            return;
-        }
+      const { data, error } = await supabase.functions.invoke('join-room', {
+        body: { code: chatCode, anonymousId },
+      });
 
-        const { data: existingChat, error } = await supabase
-            .from('chats')
-            .select('id, chat_code, expires_at')
-            .eq('chat_code', chatCode.toUpperCase())
-            .single();
+      if (error) throw new Error(error.message);
 
-        if (error && error.code !== 'PGRST116') throw error;
+      if (data.error) {
+          throw new Error(data.error);
+      }
 
-        if (existingChat) {
-            if (new Date(existingChat.expires_at) < new Date()) {
-                toast.error("Tento chat vypršel.", { id: toastId });
-                return;
-            }
-            toast.success(`Připojování k chatu: ${existingChat.chat_code}`, { id: toastId });
-            router.push(`/chat/${existingChat.id}`);
-        } else {
-            toast.error("Chat s tímto kódem nebyl nalezen.", { id: toastId });
-        }
+      toast.success('Vstup úspěšný!', { id: toastId });
+      router.push(`/chat/${data.roomId}`);
+
     } catch (error: any) {
-        toast.error(`Chyba: ${error.message}`, { id: toastId });
+      console.error("Error joining chat:", error);
+      toast.error(`Chyba: ${error.message || 'Nepodařilo se připojit k chatu.'}`, { id: toastId });
     } finally {
-        setIsJoining(false);
+      setIsLoading(false);
     }
   };
 
-  const handleCreateChat = async () => {
-    setIsCreating(true);
-    const toastId = toast.loading("Vytváření nového chatu...");
-
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            toast.error("Pro vytvoření chatu se musíte přihlásit.", { id: toastId });
-            router.push('/auth/login');
-            return;
-        }
-
-        const newChatCode = generateChatCode();
-        const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-        const { data: newChat, error } = await supabase
-            .from('chats')
-            .insert({
-                chat_code: newChatCode,
-                expires_at: expires_at,
-                created_by: user.id
-            })
-            .select('id, chat_code')
-            .single();
-
-        if (error) throw error;
-
-        if (newChat) {
-            toast.success(`Nový chat "${newChat.chat_code}" vytvořen!`, { id: toastId });
-            router.push(`/chat/${newChat.id}`);
-        } else {
-            throw new Error("Nepodařilo se vytvořit chat.");
-        }
-
-    } catch (error: any) {
-        toast.error(`Chyba: ${error.message}`, { id: toastId });
-    } finally {
-        setIsCreating(false);
-    }
-  };
-
-  // The JSX structure is now based on the provided HTML
+  // Using a simplified version of the new UI for the anonymous-first flow
   return (
-    <>
-      <div className="frame">
-        <div className="box2">
-          <div className="item" style={{ backgroundImage: "url('/media/promo/chat-woman.webp')" }}>
-            <div className="bottom">
-              <img src="/media/box2/wave.svg" className="wave" alt="Let'sChat" />
-              <div className="content">
-                <h2>Chci Let&apos;s&nbsp;Chatku</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis porttitor metus at tempus. Quisque dictum sem tellus, eu hendrerit libero malesuada suscipit.</p>
-                <p>In sit amet neque.</p>
-              </div>
-              <a href="#chci-letschatku" className="arrow scroll" title="Chci Let's Chatku"></a>
-            </div>
-          </div>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-20rem)] text-center">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-xl">
+        <h1 className="text-2xl font-bold text-primary">Vítejte v LetsChat</h1>
+        <p className="text-gray-600">Zadejte kód z vaší kartičky a začněte chatovat.</p>
 
-          <div className="item" style={{ backgroundImage: "url('/media/promo/chat-man.webp')" }}>
-            <div className="bottom">
-              <img src="/media/box2/wave-yellow.svg" className="wave" alt="Let'sChat" />
-              <div className="content yellow">
-                <h2>Už mám Let&apos;s&nbsp;Chatku</h2>
-                <p>Integer a magna sed nisl consectetur ullamcorper semper pretium lacus vitae euismod vel mi.</p>
-                <div className="container input">
-                  <form id="form-code" onSubmit={handleJoinChat} className="form">
-                    <input name="code" type="text" value={chatCode} onChange={(e) => setChatCode(e.target.value)} maxLength={16} placeholder="Zadej kód pro vstup" />
-                    <input type="submit" value="Vstoupit" disabled={isJoining} />
-                  </form>
-                  {/* Error display logic can be added here */}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <form onSubmit={handleJoinChat} className="flex items-center">
+          <input
+            type="text"
+            placeholder="Zadejte Váš kód"
+            value={chatCode}
+            onChange={(e) => setChatCode(e.target.value.toUpperCase())}
+            className="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            maxLength={5}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !anonymousId}
+            className="px-5 py-3 bg-primary text-white rounded-r-lg hover:bg-primary-dark disabled:bg-gray-400 flex items-center justify-center w-20 h-[51px]"
+          >
+            {isLoading ? <Loader2 className="animate-spin" /> : <ArrowRight />}
+          </button>
+        </form>
+        <p className="text-xs text-gray-500 mt-4">
+          Pokud jste obdrželi kartičku, zadejte kód a budete spojeni s druhou osobou.
+        </p>
       </div>
-
-      <div className="frame">
-        <div id="chci-letschatku" className="box4">
-          <a href="#" className="item" onClick={(e) => { e.preventDefault(); handleCreateChat(); }} style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
-            <div className="bottom">
-              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
-              <div className="content">
-                <h2>Let&apos;s&nbsp;Chatku si&nbsp;vytisknu sám</h2>
-              </div>
-              <div className="plus"></div>
-            </div>
-          </a>
-          <a href="#" className="item" onClick={(e) => { e.preventDefault(); handleCreateChat(); }} style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
-            <div className="bottom">
-              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
-              <div className="content">
-                <h2>Chci si&nbsp;objednat profi Let&apos;s&nbsp;Chatku</h2>
-              </div>
-              <div className="plus"></div>
-            </div>
-          </a>
-          <a href="#" className="item" onClick={(e) => { e.preventDefault(); handleCreateChat(); }} style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
-            <div className="bottom">
-              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
-              <div className="content">
-                <h2>Chci pouze kód pro seznámení</h2>
-              </div>
-              <div className="plus"></div>
-            </div>
-          </a>
-          <a href="#" className="item disabled" style={{ backgroundImage: "url('https://placehold.co/300x700/webp')" }}>
-            <div className="bottom">
-              <img src="/media/box4/wave.svg" className="wave" alt="Let'sChat" />
-              <div className="content">
-                <div className="disabled">Připravujeme</div>
-                <h2>Chci udělat dojem s&nbsp;Let&apos;s&nbsp;Chatku</h2>
-              </div>
-              <div className="plus"></div>
-            </div>
-          </a>
-        </div>
-      </div>
-
-      <div className="frame">
-        <div className="promo">
-          <h2>Co je to Let&apos;s&nbsp;Chatka a&nbsp;k&nbsp;čemu slouží?</h2>
-          <a href="#" className="arrow" title="Co je to Let's Chatka a k čemu slouží?"></a>
-          <img src="/media/promo/cards.webp" className="cards" alt="Co je to Let's Chatka a k čemu slouží" />
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

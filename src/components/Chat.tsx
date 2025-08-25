@@ -12,26 +12,63 @@ import { motion } from 'framer-motion';
 
 interface SupabaseMessage {
   id: string;
-  chat_id: string;
-  user_id: string;
+  room_id: string;
+  participant_id: number;
   content: string;
   created_at: string;
 }
+import Link from 'next/link';
+import { User } from '@supabase/supabase-js';
+import { useAnonymousId } from '@/hooks/useAnonymousId';
 
 interface ChatProps {
   chatId: string;
-  currentUserId: string;
   chatCode?: string;
 }
 
-const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
+const Chat: React.FC<ChatProps> = ({ chatId, chatCode }) => {
   const supabase = useSupabase() as SupabaseClient;
+  const anonymousUserId = useAnonymousId();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, [supabase]);
+
+  const currentUserId = user ? user.id : anonymousUserId;
+  const [participantId, setParticipantId] = useState<number | null>(null);
   const [messages, setMessages] = useState<AppMessageProps[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    const fetchParticipantId = async () => {
+      if (!currentUserId || !chatId) return;
+
+      const lookupField = user ? 'user_id' : 'anonymous_id';
+
+      const { data, error } = await supabase
+        .from('room_participants')
+        .select('id')
+        .eq('room_id', chatId)
+        .eq(lookupField, currentUserId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching participant ID:", error);
+        setError("Nepodařilo se ověřit vaši účast v této místnosti.");
+      } else if (data) {
+        setParticipantId(data.id);
+      }
+    };
+    fetchParticipantId();
+  }, [supabase, chatId, user, currentUserId]);
+
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,10 +77,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
   const mapSupabaseMessageToAppMessage = useCallback((msg: SupabaseMessage): AppMessageProps => ({
     id: msg.id,
     content: msg.content,
-    senderId: msg.user_id,
-    currentUserId: currentUserId,
+    senderId: String(msg.participant_id), // Convert number to string
+    currentUserId: participantId,
     timestamp: new Date(msg.created_at),
-  }), [currentUserId]);
+  }), [participantId]);
 
   const fetchMessages = useCallback(async () => {
     setIsLoading(true);
@@ -80,55 +117,52 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
     if (!supabase || !chatId) return;
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
     }
 
     const channel = supabase
-      .channel(`chat:${chatId}`)
+      .channel(`room:${chatId}`)
       .on<SupabaseMessage>(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
+        { event: 'INSERT', schema: 'public', table: 'room_rows', filter: `room_id=eq.${chatId}` },
         (payload) => {
           const newMessagePayload = payload.new as SupabaseMessage;
           setMessages((prevMessages) => {
-            if (prevMessages.find(msg => msg.id === newMessagePayload.id)) {
-              return prevMessages;
-            }
+            if (prevMessages.find(msg => msg.id === newMessagePayload.id)) return prevMessages;
             return [...prevMessages, mapSupabaseMessageToAppMessage(newMessagePayload)];
           });
         }
       )
       .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Subscribed to chat ${chatId}`);
-        }
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error(`Subscription error for chat ${chatId}:`, err);
-          setError("Chyba připojení k chatu v reálném čase. Zprávy se nemusí aktualizovat.");
-          toast.error("Chyba připojení k chatu. Zkuste obnovit stránku.");
+        if (status === 'SUBSCRIBED') console.log(`Subscribed to room ${chatId}`);
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`Subscription error:`, err);
+          setError("Chyba připojení k real-time chatu.");
         }
       });
     channelRef.current = channel;
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
       }
     };
   }, [supabase, chatId, mapSupabaseMessageToAppMessage]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !supabase || !chatId) return;
-    const messageToSend = { chat_id: chatId, user_id: currentUserId, content: newMessage.trim() };
+    if (!newMessage.trim() || !participantId) return;
+
+    const messageToSend = {
+      room_id: chatId,
+      participant_id: participantId,
+      content: newMessage.trim()
+    };
     setNewMessage('');
-    try {
-      const { error: insertError } = await supabase.from('messages').insert(messageToSend);
-      if (insertError) throw insertError;
-    } catch (err: any) {
-      console.error("Error sending message:", err);
+
+    const { error } = await supabase.from('room_rows').insert(messageToSend);
+    if (error) {
+      console.error("Error sending message:", error);
       toast.error("Nepodařilo se odeslat zprávu.");
-      setNewMessage(messageToSend.content);
+      setNewMessage(messageToSend.content); // Re-populate the input on error
     }
   };
 
@@ -154,6 +188,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, currentUserId, chatCode }) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)] max-h-[700px] bg-white rounded-xl shadow-2xl border border-border-color overflow-hidden">
+      {!user && (
+        <div className="p-2 text-center bg-secondary text-primary-dark text-sm">
+          Líbí se vám tento chat? <Link href={`/auth/register?claimId=${anonymousUserId}`} className="font-bold underline hover:text-white">Zaregistrujte se</Link> a uložte si ho ke svému účtu!
+        </div>
+      )}
       {chatCode && (
         <div className="p-3.5 sm:p-4 border-b border-border-color bg-surface rounded-t-xl">
           <h2 className="text-lg font-semibold text-primary text-center truncate">

@@ -43,16 +43,27 @@ export default function RegisterPage() {
         return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name, gender: gender } },
     });
+
     if (error) {
       toast.error(error.message);
-    } else {
+    } else if (data.user) {
       toast.success('Registrace úspěšná! Zkontrolujte prosím svůj e-mail pro ověření.');
-      router.push('/auth/login');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const claimId = urlParams.get('claimId');
+      if (claimId) {
+          await supabase.functions.invoke('claim-chat', {
+              body: { anonymousId: claimId }
+          });
+          toast.success('Chat byl úspěšně přiřazen k vašemu účtu!');
+      }
+
+      router.push('/dashboard');
     }
     setLoading(false);
   };

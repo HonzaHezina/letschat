@@ -8,7 +8,7 @@ export interface MessageProps {
   id: string;
   content: string;
   senderId: string;
-  currentUserId: string;
+  currentUserId: string | number | null;
   timestamp: string | Date;
   senderDisplayName?: string;
 }
