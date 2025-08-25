@@ -14,40 +14,14 @@ export default function HomePage() {
   const [chatCode, setChatCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleJoinChat = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleJoinChat = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!chatCode.trim()) {
       toast.error("Zadejte kód chatu.");
       return;
     }
-    if (!anonymousId) {
-      toast.error("Chyba při načítání vaší identity. Zkuste prosím obnovit stránku.");
-      return;
-    }
-
     setIsLoading(true);
-    const toastId = toast.loading("Vstupuji do místnosti...");
-
-    try {
-      const { data, error } = await supabase.functions.invoke('join-room', {
-        body: { code: chatCode, anonymousId },
-      });
-
-      if (error) throw new Error(error.message);
-
-      if (data.error) {
-          throw new Error(data.error);
-      }
-
-      toast.success('Vstup úspěšný!', { id: toastId });
-      router.push(`/chat/${data.roomId}`);
-
-    } catch (error: any) {
-      console.error("Error joining chat:", error);
-      toast.error(`Chyba: ${error.message || 'Nepodařilo se připojit k chatu.'}`, { id: toastId });
-    } finally {
-      setIsLoading(false);
-    }
+    router.push(`/join/${chatCode}`);
   };
 
   // Using a simplified version of the new UI for the anonymous-first flow
