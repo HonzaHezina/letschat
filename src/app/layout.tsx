@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@/styles/custom.css";
+import "@/styles/jquery-ui.css";
+import "@/styles/main-layout.css";
 import { SupabaseProvider } from "@/contexts/SupabaseProvider";
 import { Toaster } from 'react-hot-toast';
 import Header from "@/components/layout/Header";
