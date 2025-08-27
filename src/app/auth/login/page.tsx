@@ -25,16 +25,38 @@ const SocialButton = ({ provider, children }: { provider: 'google' | 'facebook',
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const supabase = useSupabase();
   const router = useRouter();
 
+  const validateForm = () => {
+    const newErrors = { email: '', password: '' };
+    let isValid = true;
+    if (!email) {
+        newErrors.email = 'Zadejte e-mailovou adresu!';
+        isValid = false;
+    }
+    // No password error message is specified for empty password, only for invalid login.
+    setErrors(newErrors);
+    return isValid;
+  }
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!validateForm()) {
+        return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+
     if (error) {
-      toast.error(error.message);
+      // The user's code suggests a generic error for the password field.
+      setErrors({ email: '', password: 'Neplatný e-mail nebo heslo!' });
+      // Also show a toast for accessibility, as the inline error might be missed.
+      toast.error('Neplatný e-mail nebo heslo!');
     } else {
       toast.success('Přihlášení úspěšné!');
       router.push('/dashboard');
@@ -47,30 +69,50 @@ export default function LoginPage() {
       <div className="image" style={{ backgroundImage: "url('/media/custom/image-left.webp')" }}></div>
       <div className="content">
         <h1>Přihlášení</h1>
-        <div className="login">
-            <SocialButton provider="facebook">Přihlásit se pomocí Facebooku</SocialButton>
-            <SocialButton provider="google">Přihlásit se pomocí Google</SocialButton>
 
-            <form onSubmit={handleLogin} className="form">
-                <div className="input">
-                    <div className="text">E-mail</div>
-                    <div className="insert">
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                </div>
-                <div className="input">
-                    <div className="text">Heslo</div>
-                    <div className="insert">
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    </div>
-                </div>
-                <div className="input">
-                    <div className="text"></div>
-                    <div className="insert">
-                        <input type="submit" value={loading ? 'Přihlašování...' : 'Přihlásit'} disabled={loading} />
-                    </div>
-                </div>
-            </form>
+        <SocialButton provider="facebook">Přihlásit se&nbsp;pomocí Facebooku</SocialButton>
+        <SocialButton provider="google">Přihlásit se&nbsp;pomocí Google</SocialButton>
+
+        <div className="login">
+          <form id="form-login" onSubmit={handleLogin} method="post" className="form" noValidate>
+            <div className="input">
+              <div className="text">E-mail</div>
+              <div className="insert">
+                <input
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={255}
+                  placeholder="E-mailová adresa"
+                />
+                {errors.email && <div className="error" style={{display: 'block'}}>{errors.email}</div>}
+              </div>
+            </div>
+
+            <div className="input">
+              <div className="text">Heslo</div>
+              <div className="insert">
+                <input
+                  type={isPasswordVisible ? 'text' : 'password'}
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  maxLength={255}
+                  placeholder="Heslo k přihlášení"
+                />
+                {errors.password && <div className="error" style={{display: 'block'}}>{errors.password}</div>}
+                <div className="visible" data-input="password1" onClick={() => setPasswordVisible(!isPasswordVisible)}></div>
+              </div>
+            </div>
+
+            <div className="input">
+              <div className="text"></div>
+              <div className="insert">
+                <input type="submit" value={loading ? 'Přihlašování...' : 'Přihlásit'} disabled={loading} />
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
