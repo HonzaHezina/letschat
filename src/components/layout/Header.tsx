@@ -51,14 +51,14 @@ export default function Header() {
                     </li>
                     <li className="logged">
                       <span className="icon menu icon-profile"></span>
-                      <Link href="/profile" title="Můj profil" className={pathname === '/profile' ? 'active' : ''}>
+                      <Link href="#" title="Můj profil">
                         Můj profil
                       </Link>
                     </li>
                     <li className="wave"></li>
                     <li>
                       <span className="icon menu icon-help"></span>
-                      <Link href="/help" title="Pomoc">Pomoc</Link>
+                      <Link href="#" title="Pomoc">Pomoc</Link>
                     </li>
                     <li>
                       <span className="icon menu icon-logout"></span>
@@ -69,7 +69,7 @@ export default function Header() {
                   <>
                     <li>
                       <span className="icon menu icon-help"></span>
-                      <Link href="/help" title="Pomoc">Pomoc</Link>
+                      <Link href="#" title="Pomoc">Pomoc</Link>
                     </li>
                     <li>
                       <span className="icon menu icon-login"></span>
@@ -102,13 +102,13 @@ export default function Header() {
                 </li>
                 <li className="logged">
                   <span className="icon menu icon-profile"></span>
-                  <Link href="/profile" title="Můj profil" className={pathname === '/profile' ? 'active' : ''} onClick={closeMenu}>
+                  <Link href="#" title="Můj profil" onClick={closeMenu}>
                     Můj profil
                   </Link>
                 </li>
                 <li>
                   <span className="icon menu icon-help"></span>
-                  <Link href="/help" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
+                  <Link href="#" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
                 </li>
                 <li>
                   <span className="icon menu icon-logout"></span>
@@ -119,7 +119,7 @@ export default function Header() {
               <>
                 <li>
                   <span className="icon menu icon-help"></span>
-                  <Link href="/help" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
+                  <Link href="#" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
                 </li>
                 <li>
                   <span className="icon menu icon-login"></span>
