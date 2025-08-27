@@ -27,48 +27,106 @@ export default function Header() {
     setMenuOpen(false);
   };
 
-  const NavLinks = () => (
-    <>
-      {user ? (
-        <>
-          <li><Link href="/dashboard" className={pathname === '/dashboard' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Můj přehled</Link></li>
-          <li><a href="#" onClick={handleLogout}>Odhlásit</a></li>
-        </>
-      ) : (
-        <>
-          <li><Link href="/auth/login" className={pathname === '/auth/login' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Přihlásit</Link></li>
-          <li><Link href="/auth/register" className={pathname === '/auth/register' ? 'active' : ''} onClick={() => setMenuOpen(false)}>Registrace</Link></li>
-        </>
-      )}
-    </>
-  );
+  const closeMenu = () => setMenuOpen(false);
+
+  const headerClassName = `header ${pathname === '/' ? 'margin' : ''}`;
 
   return (
     <>
-      <header className="header margin">
+      <header className={headerClassName}>
         <div className="frame">
           <div className="content">
             <Link href="/" className="logo" title="Let's Chat">
-              <img src="/media/custom/header-logo.svg" alt="Let'sChat" />
+              <img src="/media/custom/header-logo.svg" alt="Let'sChat" title="Let's Chat" />
             </Link>
             <nav>
               <ul className="menu">
-                <NavLinks />
+                {user ? (
+                  <>
+                    <li className="logged">
+                      <span className="icon menu icon-chats"></span>
+                      <Link href="/dashboard" title="Moje Let's Chatky" className={pathname === '/dashboard' ? 'active' : ''}>
+                        Moje Let's&nbsp;Chatky
+                      </Link>
+                    </li>
+                    <li className="logged">
+                      <span className="icon menu icon-profile"></span>
+                      <Link href="/profile" title="Můj profil" className={pathname === '/profile' ? 'active' : ''}>
+                        Můj profil
+                      </Link>
+                    </li>
+                    <li className="wave"></li>
+                    <li>
+                      <span className="icon menu icon-help"></span>
+                      <Link href="/help" title="Pomoc">Pomoc</Link>
+                    </li>
+                    <li>
+                      <span className="icon menu icon-logout"></span>
+                      <a href="#" title="Odhlášení" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Odhlášení</a>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li>
+                      <span className="icon menu icon-help"></span>
+                      <Link href="/help" title="Pomoc">Pomoc</Link>
+                    </li>
+                    <li>
+                      <span className="icon menu icon-login"></span>
+                      <Link href="/auth/login" title="Přihlášení" className={pathname === '/auth/login' ? 'active' : ''}>Přihlášení</Link>
+                    </li>
+                  </>
+                )}
               </ul>
               <a id="menu-burger" href="#" className="burger" onClick={(e) => { e.preventDefault(); setMenuOpen(!isMenuOpen); }}>
-                <img src="/media/icon/menu.svg" alt="Menu" />
+                <img src="/media/icon/menu.svg" alt="Menu" title="Menu" />
               </a>
             </nav>
           </div>
         </div>
       </header>
+
       {isMenuOpen && (
         <div id="menu-box" style={{ display: 'block' }}>
-           <a href="#" className="close" onClick={(e) => {e.preventDefault(); setMenuOpen(false)}}>
-            <img src="/media/icon/close.svg" alt="Zavřít" />
+          <a href="#" className="close" onClick={(e) => { e.preventDefault(); closeMenu(); }}>
+            <img src="/media/icon/close.svg" alt="Zavřít" title="Zavřít" />
           </a>
           <ul>
-            <NavLinks />
+            {user ? (
+              <>
+                <li className="logged">
+                  <span className="icon menu icon-chats"></span>
+                  <Link href="/dashboard" title="Moje Let's Chatky" className={pathname === '/dashboard' ? 'active' : ''} onClick={closeMenu}>
+                    Moje Let's&nbsp;Chatky
+                  </Link>
+                </li>
+                <li className="logged">
+                  <span className="icon menu icon-profile"></span>
+                  <Link href="/profile" title="Můj profil" className={pathname === '/profile' ? 'active' : ''} onClick={closeMenu}>
+                    Můj profil
+                  </Link>
+                </li>
+                <li>
+                  <span className="icon menu icon-help"></span>
+                  <Link href="/help" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
+                </li>
+                <li>
+                  <span className="icon menu icon-logout"></span>
+                  <a href="#" title="Odhlášení" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Odhlášení</a>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <span className="icon menu icon-help"></span>
+                  <Link href="/help" title="Pomoc" onClick={closeMenu}>Pomoc</Link>
+                </li>
+                <li>
+                  <span className="icon menu icon-login"></span>
+                  <Link href="/auth/login" title="Přihlášení" className={pathname === '/auth/login' ? 'active' : ''} onClick={closeMenu}>Přihlášení</Link>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       )}
