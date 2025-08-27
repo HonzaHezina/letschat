@@ -1,30 +1,164 @@
-/*
-  This file contains custom CSS rules that are difficult or inefficient
-  to replicate with Tailwind's utility-first approach.
-*/
+/* Custom Styles */
 
-/* Header styles from the original CSS */
-.header .content::after {
-  content: ' ';
-  position: absolute;
-  top: 0;
-  left: 100%;
-  display: block;
-  width: 200%;
-  height: 90px;
-  background-color: #7d1d5d; /* This is theme('colors.primary') */
+/* Button Styles */
+.button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    text-decoration: none;
+    display: inline-block;
 }
 
-/* Specific wave background for a header list item */
-.header nav ul > li.wave {
-  display: block;
-  width: 100px;
-  height: 90px;
-  background-color: transparent;
-  background-image: url('/media/custom/header-wave.svg');
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: cover;
+.button:hover {
+    background-color: #0056b3;
 }
 
-/* Other complex styles can be added here as needed */
+/* Input Styles */
+.input-field {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin-bottom: 15px;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+/* QR Scanner Styles */
+.qr-scanner {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.qr-scanner video {
+    width: 100%;
+    height: auto;
+}
+
+/* Chat Styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.chat-input {
+    display: flex;
+    padding: 10px;
+    background-color: #fff;
+    border-top: 1px solid #ccc;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.chat-input button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-left: 10px;
+}
+
+/* Message Styles */
+.message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 70%;
+}
+
+.message.sent {
+    background-color: #007bff;
+    color: white;
+    margin-left: auto;
+}
+
+.message.received {
+    background-color: #e9e9e9;
+    color: #333;
+    margin-right: auto;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 250px;
+    background-color: #f0f0f0;
+    padding: 20px;
+    border-right: 1px solid #ccc;
+}
+
+.sidebar .chat-list {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar .chat-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.sidebar .chat-list li:hover {
+    background-color: #e0e0e0;
+}
+
+.sidebar .chat-list li.active {
+    background-color: #d0d0d0;
+}

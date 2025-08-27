@@ -6,7 +6,11 @@ import { useSupabase } from '@/contexts/SupabaseProvider';
 import { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
 
-export default function Header() {
+interface HeaderProps {
+    // Add any props you need for the Header component
+}
+
+const Header: React.FC<HeaderProps> = () => {
   const supabase = useSupabase();
   const router = useRouter();
   const pathname = usePathname();
@@ -132,4 +136,6 @@ export default function Header() {
       )}
     </>
   );
-}
+};
+
+export default Header;

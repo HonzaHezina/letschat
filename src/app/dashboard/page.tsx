@@ -8,9 +8,9 @@ import toast from 'react-hot-toast';
 import { User } from '@supabase/supabase-js';
 import { Loader2, PlusCircle } from 'lucide-react';
 
-interface Room {
+interface Chat {
   id: string;
-  name: string;
+  qr_code: string;
   created_at: string;
 }
 
@@ -18,31 +18,49 @@ export default function DashboardPage() {
   const supabase = useSupabase();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newCodes, setNewCodes] = useState<{codeA: string, codeB: string} | null>(null);
 
-  const fetchRooms = useCallback(async (currentUser: User) => {
-    // This logic will need to be more complex later,
-    // fetching rooms where the user is a participant.
-    // For now, we fetch rooms created from codes owned by the user.
-    // This is a simplification for this step.
-    setLoading(false); // Placeholder
-  }, []);
+  const fetchChats = useCallback(async (currentUser: User) => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_participants')
+        .select('chat_id')
+        .eq('user_id', currentUser.id);
+
+        if (error) throw error;
+
+      if (data) {
+        const chatIds = data.map((item) => item.chat_id);
+        const { data: chats, error: chatsError } = await supabase
+          .from('chats')
+          .select('*')
+          .in('id', chatIds);
+        if (chatsError) throw chatsError;
+
+        setChats(chats || []);
+      }
+    } catch (err) {
+      toast.error('Error fetching chats');
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        fetchRooms(user);
+        fetchChats(user);
       } else {
         router.push('/auth/login');
-      }
+  }
     };
     checkUser();
-  }, [supabase, router, fetchRooms]);
+  }, [supabase, router, fetchChats]);
 
   const handleCreateCard = async () => {
     setIsCreating(true);
@@ -90,17 +108,21 @@ export default function DashboardPage() {
             )}
 
             <div className="chats">
-                {rooms.length === 0 && !loading ? (
+                {chats.length === 0 && !loading ? (
                     <p>Zatím nemáte žádné aktivní chaty.</p>
                 ) : (
-                    rooms.map(room => (
-                        <div key={room.id} className="item">
-                            {/* Room display logic will go here */}
+                    chats.map(chat => (
+                        <div key={chat.id} className="item">
+                            <Link href={`/chat/${chat.id}`} className="block p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                                <h3 className="font-bold">Chat {chat.id}</h3>
+                                <p className="text-sm text-gray-500">Vytvořeno: {new Date(chat.created_at).toLocaleString()}</p>
+                            </Link>
                         </div>
                     ))
                 )}
-            </div>
         </div>
+    </div>
     </div>
   );
 }
+

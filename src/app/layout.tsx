@@ -1,41 +1,69 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import "@/styles/custom.css";
-import "@/styles/jquery-ui.css";
-import "@/styles/main-layout.css";
+import "../styles/custom.css";
+import "../styles/jquery-ui.css";
+import "../styles/main-layout.css";
+import "../styles/legacy-styles.css";
+import "../styles/template-styles.css";
 import { SupabaseProvider } from "@/contexts/SupabaseProvider";
 import { Toaster } from 'react-hot-toast';
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import TemplateHeader from "@/components/layout/TemplateHeader";
+import TemplateFooter from "@/components/layout/TemplateFooter";
+import { usePathname } from 'next/navigation';
+
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "Let's Chat",
-  description: "Anonymní QR chat aplikace",
-  manifest: "/manifest.json",
-};
+const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
+  const pathname = usePathname();
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  let pageClass = '';
+  let menuActive = '';
+
+  if (pathname === '/') {
+    pageClass = 'page-hp';
+    menuActive = '';
+  } else if (pathname === '/auth/register') {
+    pageClass = 'page-left-image';
+    menuActive = 'registration';
+  } else if (pathname === '/auth/login') {
+    pageClass = 'page-left-image';
+    menuActive = 'login';
+  } else if (pathname === '/dashboard') {
+    pageClass = 'page-full';
+    menuActive = 'chats';
+  } else if (pathname.startsWith('/chat')) {
+    pageClass = 'page-left-right';
+    menuActive = 'chat';
+  } else if (pathname === '/profile') {
+    pageClass = 'page-full';
+    menuActive = 'profile';
+  }
+
+  const bodyClassName = `${inter.className} ${pageClass === 'page-hp' ? 'image' : ''}`;
+
   return (
     <html lang="cs">
-      <body className={inter.className}>
+      <body className={bodyClassName}>
         <SupabaseProvider>
-          <div className="flex flex-col min-h-screen">
+          <div className="main">
             <Toaster position="top-center" />
-            <Header />
+            <TemplateHeader page={pageClass} menu={menuActive} />
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {children}
             </main>
-            <Footer />
+            <TemplateFooter />
           </div>
         </SupabaseProvider>
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

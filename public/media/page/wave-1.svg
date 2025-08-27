@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 647 729">
+    <defs>
+        <style>
+            .cls-1 {
+            fill: #ed5180;
+            }
+
+            .cls-2 {
+            isolation: isolate;
+            }
+
+            .cls-3 {
+            fill: #7d1d5d;
+            }
+        </style>
+    </defs>
+    <!-- Generator: Adobe Illustrator 28.7.1, SVG Export Plug-In . SVG Version: 1.2.0 Build 142)  -->
+    <g>
+        <g id="Shape_1" class="cls-2">
+            <g id="Shape_1-2" data-name="Shape_1">
+                <path class="cls-3" d="M0,0v499.46c10.54,6.19,20.34,12.77,29.15,19.8,19.07-117.79,63.86-220.71,192.67-283.89,132.47-64.98,277.8-80.8,387.3-192.35,13.4-13.66,25.74-28.03,37.11-43.02H0Z"/>
+            </g>
+        </g>
+        <g id="Shape_1-3" data-name="Shape_1" class="cls-2">
+            <g id="Shape_1-4" data-name="Shape_1">
+                <path class="cls-1" d="M371.06,0H0v728.94c31.44-16.64,58.99-37.86,73.92-67.08,65.15-127.54-15.86-276.93-21.82-407.96C44.46,85.61,241.6,33.18,371.06,0Z"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -6,19 +6,31 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-interface Room {
-    id: number;
-    name: string;
-    // last_message: string; // Could be added later
+interface Chat {
+    id: string; // Assuming chat IDs are strings, adjust if needed
+    name?: string; // Name might be optional
+    // Add other fields as needed based on your 'chats' table structure
+    // For example: created_at?: string; last_message?: string;
 }
 
-export default function ChatListSidebar() {
+interface ChatListSidebarProps {
+    chats?: Chat[];
+}
+
+export default function ChatListSidebar({ chats }: ChatListSidebarProps) {
     const supabase = useSupabase();
     const pathname = usePathname();
-    const [rooms, setRooms] = useState<Room[]>([]);
+    const [rooms, setRooms] = useState<Chat[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // If chats are provided as a prop, use them and don't fetch data
+        if (chats) {
+            setRooms(chats);
+            setLoading(false);
+            return;
+        }
+
         const fetchRooms = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
@@ -36,27 +48,32 @@ export default function ChatListSidebar() {
             if (error) {
                 console.error("Error fetching rooms:", error);
             } else {
-                setRooms(roomData || []);
+                // Map roomData to Chat type if necessary, or ensure it matches
+                // For now, assuming structure is compatible or will be handled by TypeScript
+                setRooms(roomData as Chat[] || []);
             }
             setLoading(false);
         };
 
         fetchRooms();
-    }, [supabase]);
+    }, [supabase, chats]);
 
     if (loading) {
         return <div className="p-4"><Loader2 className="animate-spin" /></div>;
     }
 
+    // Use chats prop if provided, otherwise use local rooms state
+    const displayChats = chats || rooms;
+
     return (
         <div className="chat">
             <ul className="menu">
-                {rooms.map(room => (
-                    <li key={room.id}>
-                        <Link href={`/chat/${room.id}`} className={pathname === `/chat/${room.id}` ? 'active' : ''}>
+                {displayChats.map(chat => (
+                    <li key={chat.id}>
+                        <Link href={`/chat/${chat.id}`} className={pathname === `/chat/${chat.id}` ? 'active' : ''}>
                              <div className="image" style={{backgroundImage: "url('/media/custom/chat-icon.webp')"}}></div>
                              <div className="name">
-                                <h3>{room.name || `Chat #${room.id}`}</h3>
+                                <h3>{chat.name || `Chat #${chat.id}`}</h3>
                                 <p className="status">Toto je poslední zpráva...</p>
                              </div>
                              <div className="info">
@@ -65,7 +82,7 @@ export default function ChatListSidebar() {
                         </Link>
                     </li>
                 ))}
-                {rooms.length === 0 && <li className="p-4 text-sm text-gray-500">Nemáte žádné aktivní chaty.</li>}
+                {displayChats.length === 0 && <li className="p-4 text-sm text-gray-500">Nemáte žádné aktivní chaty.</li>}
             </ul>
         </div>
     );

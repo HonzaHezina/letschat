@@ -22,52 +22,79 @@ export default function JoinPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchCodeStatus = async () => {
-      if (!code || !anonymousId) return;
-      try {
-        const { data, error } = await supabase.functions.invoke('get-code-status', {
-          body: { code, anonymousId },
-        });
+    if (code && anonymousId) {
+      const joinChat = async () => {
+        try {
+          const { data: chat, error } = await supabase
+            .from('chats')
+            .select('*')
+            .eq('qr_code', code)
+            .single();
         if (error) throw error;
-        if (data.status) {
-          setStatus(data.status);
+          if (chat) {
+            const { data: participants, error: participantsError } = await supabase
+              .from('chat_participants')
+              .select('*')
+              .eq('chat_id', chat.id);
+
+            if (participantsError) throw participantsError;
+
+            if (participants.length >= 2) {
+              setStatus('full');
+            } else if (chat.pin_protected) {
+              setStatus('protected');
         } else {
-            throw new Error(data.error || 'Failed to get code status.');
+              setStatus('new');
         }
-      } catch (error: any) {
-        toast.error(error.message);
+          } else {
         setStatus('invalid');
-      } finally {
-        setLoading(false);
       }
-    };
-    if(anonymousId) fetchCodeStatus();
+        } catch (error: any) {
+          toast.error(error.message);
+          setStatus('invalid');
+    } finally {
+          setLoading(false);
+    }
+  };
+
+      joinChat();
+  }
   }, [code, anonymousId, supabase]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (status === 'protected' && pin.length !== 5) {
-        toast.error("PIN musí mít 5 číslic.");
-        return;
-    }
+      toast.error("PIN musí mít 5 číslic.");
+      return;
+  }
     setSubmitting(true);
     const toastId = toast.loading("Vstupuji do místnosti...");
 
     try {
-        const { data, error } = await supabase.functions.invoke('finalize-join', {
-            body: { code, anonymousId, pin: pin || null }
-        });
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('qr_code', code)
+        .single();
 
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+      if (chatError) throw chatError;
 
-        toast.success("Vstup úspěšný!", { id: toastId });
-        router.push(`/chat/${data.roomId}`);
+      if (chat.pin_protected && chat.pin !== pin) {
+        throw new Error("Nesprávný PIN");
+      }
 
+      const { error: participantError } = await supabase
+        .from('chat_participants')
+        .insert([{ chat_id: chat.id, user_id: anonymousId }]);
+
+      if (participantError) throw participantError;
+
+      toast.success("Vstup úspěšný!", { id: toastId });
+      router.push(`/chat/${chat.id}`);
     } catch(error: any) {
-        toast.error(error.message, { id: toastId });
+      toast.error(error.message, { id: toastId });
     } finally {
-        setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -124,3 +151,4 @@ export default function JoinPage() {
     </div>
   );
 }
+
