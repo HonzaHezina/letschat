@@ -2,23 +2,28 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 export default function HomePage() {
   const router = useRouter();
   const [chatCode, setChatCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleJoinChat = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!chatCode.trim()) {
-      toast.error("Zadejte kód chatu.");
+      setFormError("Zadejte platný kód");
       return;
     }
     setIsLoading(true);
     router.push(`/join/${chatCode.toUpperCase()}`);
   };
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormError('');
+    setChatCode(e.target.value);
+  }
 
   return (
     <>
@@ -43,10 +48,11 @@ export default function HomePage() {
                 <h2>Už mám Let&apos;s&nbsp;Chatku</h2>
                 <p>Integer a magna sed nisl consectetur ullamcorper semper pretium lacus vitae euismod vel mi.</p>
                 <div className="container input">
-                  <form id="form-code" onSubmit={handleJoinChat} className="form">
-                    <input name="code" type="text" value={chatCode} onChange={(e) => setChatCode(e.target.value)} maxLength={5} placeholder="Zadej kód pro vstup" />
+                  <form id="form-code" onSubmit={handleJoinChat} className="form" noValidate>
+                    <input name="code" type="text" value={chatCode} onChange={handleCodeChange} maxLength={16} placeholder="Zadej kód pro vstup" />
                     <input type="submit" value="Vstoupit" disabled={isLoading} />
                   </form>
+                  {formError && <div id="form-code-error" className="error" style={{display: 'block'}}>{formError}</div>}
                 </div>
               </div>
             </div>
