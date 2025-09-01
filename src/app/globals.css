@@ -23,40 +23,8 @@ body, html {
     margin-bottom: 20px;
 }
 
-/* Header and Footer */
-.header, .footer {
-    width: 100%;
-    background-color: #7d1d5d; /* From original CSS */
-    color: white;
-    padding: 10px 20px;
-    box-sizing: border-box;
-}
-
-.header .content, .footer .content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.header .logo img, .footer .logo img {
-    height: 50px;
-}
-
-.header nav .menu {
-    list-style: none;
-    display: flex;
-    gap: 20px;
-    margin: 0;
-    padding: 0;
-}
-
-.header nav .menu a {
-    color: white;
-    text-decoration: none;
-}
-.header nav .menu a.active {
-    text-decoration: underline;
-}
+/* Header and footer styles are provided by the template CSS in /storage/css/style.css
+    Removing local duplicates to let the canonical template styles control visuals. */
 
 /* Page with Left Image Layout */
 .page.imageleft {
@@ -156,6 +124,8 @@ body, html {
     background-position: center;
     position: relative;
     color: white;
+    overflow: hidden;
+    border-radius: 30px;
 }
 .box2 .item .bottom {
     position: absolute;
@@ -180,6 +150,8 @@ body, html {
     position: relative;
     color: white;
     text-decoration: none;
+    overflow: hidden;
+    border-radius: 30px;
 }
 .box4 .item.disabled {
     filter: grayscale(1);
@@ -230,3 +202,36 @@ body, html {
         flex-direction: column;
     }
 }
+
+/* Chat bubbles (extracted from .source template) */
+.chat .box > .messages::-webkit-scrollbar { width: 5px; }
+.chat .box > .messages::-webkit-scrollbar-thumb { background: #aaa; border-radius: 5px; }
+.chat .box > .messages::-webkit-scrollbar-track { margin: 0 5px; background: #eee; border-radius: 5px; }
+.chat .box > .messages { /* show a window of 10 messages; scrollbar navigates history */
+    --message-height: 64px;
+    overflow-y: auto;
+    padding:8px 16px;
+    width:100%;
+        height: calc(var(--message-height) * 5); /* always show 5 messages */
+        max-height: calc(var(--message-height) * 5);
+}
+.chat .box > .messages > .bubbles { display:flex; flex-direction:column; padding:0; gap:6px; }
+.chat .box > .messages::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
+.chat .box > .messages::-webkit-scrollbar-track { margin: 0 5px; background: #0b0b0b; border-radius: 5px; }
+.chat .box > .messages > .bubbles > .bubble { display:flex; align-items:start; gap:12px; padding:8px; min-height: var(--message-height); box-sizing: border-box; }
+.chat .box > .messages > .bubbles > .bubble > .image { width:60px; min-width:60px; height:60px; min-height:60px; background-position:center center; background-repeat:no-repeat; background-size:cover; border-radius:30px; }
+.chat .box > .messages > .bubbles > .bubble > .text > .date { margin:0 0 10px 0; font-size:11px; font-weight:400; line-height:11px; color:#bbb; }
+.chat .box > .messages > .bubbles > .bubble > .text > span { display:flex; flex-direction:column; margin:0 0 10px 0; padding:14px 18px; max-width:90%; font-size:14px; font-weight:500; line-height:20px; background-color:#f7f7f8; border-radius:12px; color:#0b0b0b; }
+.chat .box > .messages > .bubbles > .bubble > .text > span::before { content:' '; position:absolute; top:0; width:20px; height:20px; background-position:center center; background-repeat:no-repeat; background-size:20px; }
+.chat .box > .messages > .bubbles > .bubble > .text > span.clean::before { display:none; }
+.chat .box > .messages > .bubbles > .bubble > .text > .image { display:flex; max-width:50%; height:auto; }
+.chat .box > .messages > .bubbles > .bubble > .text > .image > img { width:100%; height:auto; border-radius:10px; }
+.chat .box > .messages > .bubbles > .bubble.pagea { flex-direction: row-reverse; }
+.chat .box > .messages > .bubbles > .bubble.pagea > .text { place-items: end; }
+.chat .box > .messages > .bubbles > .bubble.pagea > .text > span { text-align: right; background-color: #dbeafe; color: #071233; }
+.chat .box > .messages > .bubbles > .bubble.pagea > .text > span::before { left: initial; right: -12px; background-image: url('/media/chat/bubble-pagea.webp'); }
+.chat .box > .messages > .bubbles > .bubble.pageb { flex-direction: row; }
+.chat .box > .messages > .bubbles > .bubble.pageb > .text { place-items: start; }
+.chat .box > .messages > .bubbles > .bubble.pageb > .text > span { text-align: left; background-color: #f3f4f6; color:#0b0b0b; }
+.chat .box > .messages > .bubbles > .bubble.pageb > .text > span::before { left: -12px; right: initial; background-image: url('/media/chat/bubble-pageb.webp'); }
+.chat .box > .tool { display:flex; align-items:center; padding:20px; width:100%; background-color:#ffb600; }

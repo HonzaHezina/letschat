@@ -1,3 +1,6 @@
+/* Odstraněny duplicitní styly pro .header, .frame, .logo, .menu, .wave, .burger. Používejte pouze styly z public/storage/css/style.css. */
+
+
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 :root {
 	--width-max: 1360px;

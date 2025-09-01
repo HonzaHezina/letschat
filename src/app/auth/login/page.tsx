@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useSupabase } from '@/contexts/SupabaseProvider';
+import { useSupabaseSafe } from '@/contexts/SupabaseProvider';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 const SocialButton = ({ provider, children }: { provider: 'google' | 'facebook', children: React.ReactNode }) => {
-    const supabase = useSupabase();
+  const supabase = useSupabaseSafe();
     const handleSocialLogin = async () => {
-        if (!supabase) return;
+    if (!supabase) return;
         await supabase.auth.signInWithOAuth({
             provider,
             options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [isPasswordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const supabase = useSupabase();
+  const supabase = useSupabaseSafe();
   const router = useRouter();
 
   const validateForm = () => {
@@ -50,6 +50,13 @@ export default function LoginPage() {
     }
 
     setLoading(true);
+    if (!supabase) {
+      // supabase not initialized yet; show a generic error or early return
+      setLoading(false);
+      toast.error('Klient není připraven, zkuste to prosím znovu za moment.');
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -70,8 +77,8 @@ export default function LoginPage() {
       <div className="content">
         <h1>Přihlášení</h1>
 
-        <SocialButton provider="facebook">Přihlásit se&nbsp;pomocí Facebooku</SocialButton>
-        <SocialButton provider="google">Přihlásit se&nbsp;pomocí Google</SocialButton>
+  <SocialButton provider="facebook">Přihlásit se&nbsp;pomocí Facebooku</SocialButton>
+  <SocialButton provider="google">Přihlásit se&nbsp;pomocí Google</SocialButton>
 
         <div className="login">
           <form id="form-login" onSubmit={handleLogin} method="post" className="form" noValidate>
@@ -109,7 +116,7 @@ export default function LoginPage() {
             <div className="input">
               <div className="text"></div>
               <div className="insert">
-                <input type="submit" value={loading ? 'Přihlašování...' : 'Přihlásit'} disabled={loading} />
+                <input type="submit" value={loading ? 'Přihlašování...' : 'Přihlásit'} disabled={loading || !supabase} />
               </div>
             </div>
           </form>

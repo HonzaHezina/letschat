@@ -9,12 +9,13 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 
 interface QrScannerProps {
-  onCodeDetected: (code: string) => void;
-  // If set, the scanner will try to auto-start. Otherwise, user clicks a button.
+  onCodeDetected?: (code: string) => void;
+  onScan?: (code: string | null) => void;
+  onError?: (err: any) => void;
   autoStart?: boolean;
 }
 
-const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false }) => {
+const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, onScan, onError, autoStart = false }) => {
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -70,20 +71,24 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
           },
           aspectRatio: 1.0, // Square aspect ratio for the scanning box
         },
-        (decodedText) => {
+        // success callback
+        (decodedText: string) => {
           stopScanner();
           toast.success("QR kód úspěšně naskenován!");
-          onCodeDetected(decodedText);
+          if (onCodeDetected) onCodeDetected(decodedText);
+          if (onScan) onScan(decodedText);
         },
-        (errorMessage) => {
+        // error callback
+        (errorMessage: string) => {
           // This callback is called frequently, only log actual errors or specific messages
           if (errorMessage.includes("NotFoundException")) {
             // This is common when no QR code is in view, not necessarily an "error"
-          } else if(errorMessage.includes("PERMISSION_DENIED")) {
-             setScanError("Přístup ke kameře byl odepřen.");
-             toast.error("Přístup ke kameře byl odepřen. Povolte prosím přístup v nastavení prohlížeče.");
-             setIsScanning(false);
-             setPermissionGranted(false);
+          } else if (errorMessage.includes("PERMISSION_DENIED")) {
+            setScanError("Přístup ke kameře byl odepřen.");
+            toast.error("Přístup ke kameře byl odepřen. Povolte prosím přístup v nastavení prohlížeče.");
+            setIsScanning(false);
+            setPermissionGranted(false);
+            if (onError) onError(new Error("Camera permission denied"));
           } else {
             // console.warn(`QR Scanner warning: ${errorMessage}`);
           }
@@ -101,6 +106,7 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
       setScanError(friendlyMessage);
       toast.error(friendlyMessage);
       setIsScanning(false);
+  if (onError) onError(err);
     }
   };
 
@@ -124,7 +130,8 @@ const QrScanner: React.FC<QrScannerProps> = ({ onCodeDetected, autoStart = false
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim()) {
-      onCodeDetected(manualCode.trim());
+  if (onCodeDetected) onCodeDetected(manualCode.trim());
+  if (onScan) onScan(manualCode.trim());
       setManualCode('');
     } else {
       toast.error("Zadejte prosím kód chatu.");

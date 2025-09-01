@@ -7,7 +7,6 @@ import "../styles/custom.css";
 import "../styles/jquery-ui.css";
 import "../styles/main-layout.css";
 import "../styles/legacy-styles.css";
-import "../styles/template-styles.css";
 import { SupabaseProvider } from "@/contexts/SupabaseProvider";
 import { Toaster } from 'react-hot-toast';
 import TemplateHeader from "@/components/layout/TemplateHeader";
@@ -50,6 +49,11 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
 
   return (
     <html lang="cs">
+      <head>
+        <link rel="icon" type="image/x-icon" href="/media/favicon/favicon.ico" />
+        <link rel="stylesheet" href="/vendor/jquery/jquery-ui.min.css" />
+        <link rel="stylesheet" href="/storage/css/style.css" />
+      </head>
       <body className={bodyClassName}>
         <SupabaseProvider>
           <div className="main">
@@ -58,9 +62,14 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
               {children}
             </main>
-            <TemplateFooter />
+            {/* The original .source template omits the footer on registration and login pages */}
+            {pathname !== '/auth/register' && pathname !== '/auth/login' && <TemplateFooter />}
           </div>
         </SupabaseProvider>
+            {/* Legacy vendor scripts copied from .source to public/vendor and public/storage */}
+            <script src="/vendor/jquery/jquery.min.js"></script>
+            <script src="/vendor/jquery/jquery-ui.min.js"></script>
+            <script src="/storage/js/app.js"></script>
       </body>
     </html>
   );

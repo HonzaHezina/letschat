@@ -1,20 +1,24 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useSupabase } from '@/contexts/SupabaseProvider';
+import { useSupabaseSafe } from '@/contexts/SupabaseProvider';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 // Re-using the SocialButton from the original file as it contains correct logic.
 const SocialButton = ({ provider, children }: { provider: 'google' | 'facebook', children: React.ReactNode }) => {
-    const supabase = useSupabase();
-    const handleSocialLogin = async () => {
-        if (!supabase) return;
-        await supabase.auth.signInWithOAuth({
-            provider,
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
-    };
+  const supabase = useSupabaseSafe();
+  const handleSocialLogin = async () => {
+    if (!supabase) {
+      // Client not ready
+      toast.error('Klient není připraven, zkuste to prosím za moment.');
+      return;
+    }
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
     return (
         <a href="#" onClick={(e) => { e.preventDefault(); handleSocialLogin(); }} className={`vendor ${provider}`}>
             <div className={`logo ${provider}`}></div>
@@ -41,7 +45,7 @@ export default function RegisterPage() {
   const [isPassword2Visible, setPassword2Visible] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const supabase = useSupabase();
+  const supabase = useSupabaseSafe();
   const router = useRouter();
 
   const validateForm = () => {
@@ -80,6 +84,12 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
+    if (!supabase) {
+      setLoading(false);
+      toast.error('Klient není připraven, zkuste to prosím znovu za moment.');
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -95,6 +105,7 @@ export default function RegisterPage() {
       const claimId = urlParams.get('claimId');
       if (claimId) {
           try {
+            if (!supabase) throw new Error('Supabase client not available');
             await supabase.functions.invoke('claim-chat', {
                 body: { anonymousId: claimId }
             });

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseProvider';
+import TABLES from '@/lib/dbTables';
 import Chat from '@/components/Chat';
 import toast from 'react-hot-toast';
 import { ArrowLeft, XCircle, Loader2 } from 'lucide-react';
@@ -36,7 +37,7 @@ export default function ChatPage() {
         // We only need to fetch the room's public code to display it.
         // The actual participation logic is handled by the Chat component and anonymous ID.
         const { data, error: fetchError } = await supabase
-          .from('rooms')
+          .from(TABLES.ROOMS)
           .select('id, name') // Assuming the code is stored in the 'name' field for simplicity
           .eq('id', chatId)
           .single();

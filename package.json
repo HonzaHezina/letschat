@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test-supabase": "node scripts/test-supabase.js",
+    "test-finalize-join": "node scripts/test-finalize-join.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/supabase-js": "^2.56.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.18.1",
     "html5-qrcode": "^2.3.8",

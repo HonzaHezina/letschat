@@ -1,18 +1,34 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve, createClient, getBcrypt } from '../_shared/runtime-shims.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logEvent } from '../_shared/log.ts';
 
-// Basic hashing function for PIN (for a real app, use a more secure library like bcrypt)
-async function hashPin(pin: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pin);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+const TABLES = {
+  CODES: 'codes',
+  ROOMS: 'rooms',
+  ROOM_PARTICIPANTS: 'room_participants',
+};
+
+// Use bcrypt via runtime shim
+let _bcrypt: any = null;
+async function ensureBcrypt() {
+  if (!_bcrypt) _bcrypt = await getBcrypt();
+  return _bcrypt;
 }
 
-serve(async (req) => {
+function hashPinSync(pin: string): string {
+  // use cost 10 for quick hashing of short PINs
+  // bcryptjs provides sync methods - ensure sync availability via shim at runtime
+  // (in editor this is a no-op shim)
+  // eslint-disable-next-line no-sync
+  return (globalThis as any).BCRYPT_HASH_SYNC ? (globalThis as any).BCRYPT_HASH_SYNC(pin) : ("" + pin);
+}
+
+function comparePinSync(pin: string, hash: string): boolean {
+  // eslint-disable-next-line no-sync
+  return (globalThis as any).BCRYPT_COMPARE_SYNC ? (globalThis as any).BCRYPT_COMPARE_SYNC(pin, hash) : pin === hash;
+}
+
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -23,59 +39,29 @@ serve(async (req) => {
   try {
     if (!code || !anonymousId) throw new Error('Code and anonymousId are required.');
 
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const supabase = await createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    // 1. Find the code and its pair
-    const { data: codeData, error: codeError } = await supabase.from('codes').select('id, linked_to, room_id, used, pin_hash').eq('code', code.toUpperCase()).single();
-    if (codeError || !codeData) throw new Error('Neplatný kód.');
-
-    // 2. Handle PIN verification if code is already used and has a PIN
-    if (codeData.used && codeData.pin_hash) {
-        if (!pin) throw new Error('Tento chat vyžaduje PIN.');
-        const providedPinHash = await hashPin(pin);
-        if (providedPinHash !== codeData.pin_hash) {
-            throw new Error('Nesprávný PIN.');
-        }
+    // Delegate the atomic finalize-join work to a DB-side RPC function to avoid race conditions
+  // @ts-ignore: Deno types are provided in supabase/functions/types.d.ts in runtime; ignore editor warning
+  const serviceRoleClient = await createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: rpcData, error: rpcError } = await serviceRoleClient.rpc('finalize_join', { p_code: code.toUpperCase(), p_anonymous_id: anonymousId, p_pin: pin ?? null });
+    if (rpcError) {
+      const msg = String(rpcError.message || rpcError);
+      if (msg.includes('invalid_code')) throw new Error('Neplatný kód.');
+      if (msg.includes('pin_required')) throw new Error('Tento chat vyžaduje PIN.');
+      if (msg.includes('invalid_pin')) throw new Error('Nesprávný PIN.');
+      if (msg.includes('room_full')) throw new Error('Místnost je již plná.');
+      throw rpcError;
     }
 
-    // 3. Find or create the room
-    let roomId = codeData.room_id;
-    if (!roomId) {
-        const { data: newRoom, error: roomErr } = await supabase.from('rooms').insert({}).select('id').single();
-        if (roomErr) throw roomErr;
-        roomId = newRoom.id;
-        await supabase.from('codes').update({ room_id: roomId }).in('id', [codeData.id, codeData.linked_to]);
-    }
-
-    // 4. Check participants
-    const { data: participants, error: pError } = await supabase.from('room_participants').select('id, anonymous_id').eq('room_id', roomId);
-    if (pError) throw pError;
-    const isParticipant = participants.some(p => p.anonymous_id === anonymousId);
-    if (participants.length >= 2 && !isParticipant) throw new Error('Místnost je již plná.');
-
-    // 5. Add participant if not already in
-    if (!isParticipant) {
-        await supabase.from('room_participants').insert({ room_id: roomId, anonymous_id: anonymousId, code_id: codeData.id });
-
-        // 6. Set PIN if it's a new entry and PIN was provided
-        if (!codeData.used && pin) {
-            const newPinHash = await hashPin(pin);
-            await supabase.from('codes').update({ pin_hash: newPinHash }).eq('id', codeData.id);
-            // Also update the linked code's PIN hash to be the same
-            if (codeData.linked_to) {
-                 await supabase.from('codes').update({ pin_hash: newPinHash }).eq('id', codeData.linked_to);
-            }
-        }
-
-        // 7. Mark code as used
-        await supabase.from('codes').update({ used: 1, date_first: new Date().toISOString() }).eq('id', codeData.id);
-    }
+    const roomId = Array.isArray(rpcData) ? rpcData[0] : rpcData;
 
     await logEvent({ ...logData, data: { ...logData.data, roomId } });
     return new Response(JSON.stringify({ roomId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
-  } catch (error) {
-    await logEvent({ ...logData, error: error.message });
-    return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
+  } catch (err: unknown) {
+    const message = (err && typeof err === 'object' && 'message' in err) ? (err as any).message : String(err);
+    await logEvent({ ...logData, error: message });
+    return new Response(JSON.stringify({ error: message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
   }
 });

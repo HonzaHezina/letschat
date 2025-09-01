@@ -1,8 +1,12 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve, createClient } from '../_shared/runtime-shims.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 
-serve(async (req) => {
+const TABLES = {
+  CODES: 'codes',
+  ROOM_PARTICIPANTS: 'room_participants',
+};
+
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -11,13 +15,13 @@ serve(async (req) => {
     const { code, anonymousId } = await req.json();
     if (!code || !anonymousId) throw new Error('Code and anonymousId are required.');
 
-    const supabase = createClient(
+    const supabase = await createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
     const { data: codeData, error: codeError } = await supabase
-      .from('codes')
+      .from(TABLES.CODES)
       .select('id, room_id, used, pin_hash, anonymous_hash')
       .eq('code', code.toUpperCase())
       .single();
@@ -37,14 +41,14 @@ serve(async (req) => {
     }
 
     // Room exists, check participants
-    const { data: participants, error: pError } = await supabase
-        .from('room_participants')
+  const { data: participants, error: pError } = await supabase
+    .from(TABLES.ROOM_PARTICIPANTS)
         .select('id, anonymous_id')
         .eq('room_id', codeData.room_id);
 
     if (pError) throw pError;
 
-    const isParticipant = participants.some(p => p.anonymous_id === anonymousId);
+  const isParticipant = (participants as any[]).some((p: any) => p.anonymous_id === anonymousId);
 
     if (participants.length >= 2 && !isParticipant) {
         return new Response(JSON.stringify({ status: 'full' }), {
@@ -68,8 +72,9 @@ serve(async (req) => {
         status: 200,
     });
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (err: unknown) {
+    const message = (err && typeof err === 'object' && 'message' in err) ? (err as any).message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

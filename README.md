@@ -179,6 +179,20 @@ CREATE POLICY "Allow authenticated user access" ON public.room_rows FOR ALL USIN
 CREATE POLICY "Allow anonymous read access" ON public.room_rows FOR SELECT USING (auth.role() = 'anon');
 ```
 
+### 2.1 Doporučené testování RPC `finalize_join`
+
+Po vložení SQL skriptu doporučuji otestovat novou DB funkci `finalize_join` pomocí přiloženého skriptu:
+
+PowerShell (lokálně, NE do VCS):
+```powershell
+$env:SUPABASE_SERVICE_ROLE_KEY = "<your_service_role_key>"
+$env:NEXT_PUBLIC_SUPABASE_URL = "https://..."
+node scripts/test-finalize-join.js A1234 00000000-0000-0000-0000-000000000000
+```
+
+Skript zavolá RPC a vypíše status a odpověď. Pokud funkce vyhodí chybu (např. `invalid_code`, `pin_required`), dostanete textovou chybovou zprávu.
+
+
 ### 3. Instalace a Konfigurace
 1.  **Instalace závislostí:** V terminálu, ve složce projektu, spusťte:
     ```bash

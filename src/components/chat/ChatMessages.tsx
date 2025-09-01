@@ -24,25 +24,31 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages }) => {
       </div>
       <div className="messages">
         <div className="bubbles">
-          {messages.map((message) => (
-            <div key={message.id} className={`bubble ${message.sender}`}>
-              <div className="image" data-background={`/media/custom/${message.sender}.webp`}></div>
-              <div className="text">
-                <div className="date">{message.date}</div>
-                {message.image ? (
-                  <div className="image"><img src={message.image} alt="Chat image" /></div>
-                ) : (
-                  <span>{message.text}</span>
-                )}
+          {messages.map((message) => {
+            // Map sender to .source template bubble sides. Assumption: sender === 'me' means current user.
+            const isCurrent = message.sender === 'me';
+            const bubbleClass = isCurrent ? 'bubble pageb' : 'bubble pagea';
+            const imageUrl = message.image ? message.image : `/media/custom/${message.sender}.webp`;
+            return (
+              <div key={message.id} className={bubbleClass}>
+                <div className="image" data-background={imageUrl}></div>
+                <div className="text">
+                  <div className="date">{message.date}</div>
+                  {message.image ? (
+                    <div className="image"><img src={message.image} alt="Chat image" /></div>
+                  ) : (
+                    <span>{message.text}</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       <div className="tool">
         <form id="form-chat-message" action="#" method="post" className="form">
           <input type="hidden" name="id" value="2" />
-          <input name="message" type="text" value="" maxLength={2048} placeholder="Napište zprávu ..." />
+          <input name="message" type="text" defaultValue="" maxLength={2048} placeholder="Napište zprávu ..." />
           <input type="submit" value="" />
         </form>
         <a href="#" id="chat-camera" className="camera"></a>

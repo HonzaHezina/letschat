@@ -1,15 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
+// Provide a lazy async getter for the Supabase client to avoid bundling
+// the realtime module into server bundles (which can trigger bundler warnings).
+// We dynamically import '@supabase/supabase-js' at runtime in the browser only.
 
-// Эти переменные должны быть установлены в переменных окружения
-// NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let _client: any = null;
 
-if (!supabaseUrl) {
-  throw new Error("Supabase URL not found. Please set NEXT_PUBLIC_SUPABASE_URL environment variable.");
+export async function getSupabaseClient() {
+  if (_client) return _client;
+
+  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+  const supabaseAnonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      'Warning: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. Supabase client will be initialized but requests may fail.'
+    );
+  }
+
+  // Use an indirect import to avoid static analysis by bundlers that
+  // would otherwise traverse into the Supabase package and warn about
+  // dynamic requires inside its dependencies (like realtime-js).
+  const mod = await import('@supabase/supabase-js');
+  const { createClient } = mod;
+  _client = createClient(supabaseUrl, supabaseAnonKey);
+  return _client;
 }
-if (!supabaseAnonKey) {
-  throw new Error("Supabase anonymous key not found. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable.");
-}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export default getSupabaseClient;

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSupabase } from '@/contexts/SupabaseProvider';
+import { useSupabaseSafe } from '@/contexts/SupabaseProvider';
+import TABLES from '@/lib/dbTables';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -15,7 +16,7 @@ interface Chat {
 }
 
 export default function DashboardPage() {
-  const supabase = useSupabase();
+  const supabase = useSupabaseSafe();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
@@ -24,9 +25,10 @@ export default function DashboardPage() {
   const [newCodes, setNewCodes] = useState<{codeA: string, codeB: string} | null>(null);
 
   const fetchChats = useCallback(async (currentUser: User) => {
+    if (!supabase) return;
     try {
       const { data, error } = await supabase
-        .from('chat_participants')
+        .from(TABLES.CHAT_PARTICIPANTS)
         .select('chat_id')
         .eq('user_id', currentUser.id);
 
@@ -35,7 +37,7 @@ export default function DashboardPage() {
       if (data) {
         const chatIds = data.map((item) => item.chat_id);
         const { data: chats, error: chatsError } = await supabase
-          .from('chats')
+          .from(TABLES.CHATS)
           .select('*')
           .in('id', chatIds);
         if (chatsError) throw chatsError;
@@ -51,6 +53,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const checkUser = async () => {
+  if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
@@ -67,6 +70,7 @@ export default function DashboardPage() {
     setNewCodes(null);
     const toastId = toast.loading("Vytvářím novou kartičku...");
     try {
+  if (!supabase) throw new Error('Supabase client not available');
         const { data, error } = await supabase.functions.invoke('create-card');
         if (error) throw error;
         if (data.error) throw new Error(data.error);
@@ -80,6 +84,9 @@ export default function DashboardPage() {
     }
   };
 
+  if (!supabase) {
+    return <div className="flex justify-center items-center h-screen text-lg">Načítám chatovací klient...</div>;
+  }
   if (loading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   }

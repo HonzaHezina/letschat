@@ -1,6 +1,8 @@
+"use client";
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import { supabase } from '../../lib/supabaseClient';
+import { useRouter } from 'next/navigation';
+import { useSupabaseSafe } from '@/contexts/SupabaseProvider';
+import TABLES from '@/lib/dbTables';
 import { useAnonymousId } from '../../hooks/useAnonymousId';
 import ChatListSidebar from '../../components/chat/ChatListSidebar';
 
@@ -19,22 +21,25 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({ children }) => {
     const router = useRouter();
     const anonymousId = useAnonymousId();
 
+    const supabase = useSupabaseSafe();
+
     useEffect(() => {
+        if (!supabase || !anonymousId) return; // počkej na načtení klienta i ID
         const fetchChats = async () => {
             try {
                 const { data, error } = await supabase
-                    .from('chat_participants')
-                    .select('chat_id')
-                    .eq('user_id', anonymousId);
+                    .from(TABLES.ROOM_PARTICIPANTS)
+                    .select('room_id')
+                    .eq('anonymous_id', anonymousId);
 
                 if (error) throw error;
 
                 if (data) {
-                    const chatIds = data.map((item: ChatParticipant) => item.chat_id);
+                    const roomIds = data.map((item: any) => item.room_id);
                     const { data: chats, error: chatsError } = await supabase
-                        .from('chats')
+                        .from(TABLES.ROOMS)
                         .select('*')
-                        .in('id', chatIds);
+                        .in('id', roomIds);
 
                     if (chatsError) throw chatsError;
 
@@ -48,8 +53,11 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({ children }) => {
         };
 
         fetchChats();
-    }, [anonymousId]);
+    }, [anonymousId, supabase]);
 
+    if (!supabase) {
+        return <div className="flex justify-center items-center h-screen text-lg">Načítám chatovací klient...</div>;
+    }
     if (loading) return <div>Loading...</div>;
     if (error) return <div className="error">{error}</div>;
 
